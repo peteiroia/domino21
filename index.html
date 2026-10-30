@@ -498,6 +498,26 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 .board .tarrow{cursor:pointer}
 .board .tarrow circle{fill:var(--brass);stroke:#fff;stroke-width:.06;animation:tglow .7s ease-in-out infinite alternate}
 .board .tarrow path{fill:none;stroke:#0a1f5c;stroke-width:.14;stroke-linecap:round;stroke-linejoin:round}
+.opp.T .ofan{padding-left:0}
+.opp.T .ofan > i{width:var(--tw,30px);height:var(--tl,52px);margin-left:calc(var(--step,22px) - var(--tw,30px))}
+.opp.T .ofan > i:first-child{margin-left:0}
+.opp.L .ofan,.opp.R .ofan{padding:4px calc((var(--tl,52px) - var(--tw,30px)) / 2) 0}
+.opp.L .ofan > i,.opp.R .ofan > i{width:var(--tw,30px);height:var(--tl,52px);margin-top:calc(var(--step,19px) - var(--tl,52px))}
+.opp.L .ofan > i:first-child,.opp.R .ofan > i:first-child{margin-top:0}
+.table.pitch > .drawctr{position:relative;grid-area:i;justify-self:end;align-self:center;top:auto;left:auto;margin:2px 4px 2px 0}
+.table.pitch .tinfo{padding-right:132px}
+.wrap.withside > header .hbtns{display:none}
+.drawer{grid-template-rows:auto 1fr auto auto}
+.drawer-rules{margin:0 16px 10px;max-height:40vh;overflow:auto;font-size:12px}
+.drawer-foot{display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px calc(14px + env(safe-area-inset-bottom,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-top:1px solid var(--line)}
+.drawer-foot .btn{flex:1 1 auto;padding:9px 12px;font-size:13px}
+@media (orientation:landscape){.wrap.withside > header{display:none}}
+@media (orientation:landscape) and (max-height:540px){
+  .opp{--tw:24px;--tl:42px}
+  .opp.T .ofan > i{width:var(--tw);height:var(--tl)}
+  .opp.L .ofan > i,.opp.R .ofan > i{width:var(--tw);height:var(--tl)}
+  .drawer-foot{padding-top:6px;padding-bottom:8px}.drawer-foot .btn{padding:6px 10px;font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -625,6 +645,12 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 <aside class="drawer" id="drawer" aria-label="Clasificación" hidden>
   <div class="drawer-head"><h2>Clasificación</h2><button class="ghost" type="button" id="closeRank" aria-label="Cerrar clasificación">Cerrar</button></div>
   <div class="drawer-body" id="rankBody"></div>
+  <div class="drawer-rules how" id="drawerRules" hidden></div>
+  <div class="drawer-foot">
+    <button class="btn alt" type="button" id="drawerRulesBtn">Reglas</button>
+    <button class="btn alt" type="button" id="drawerBell" hidden>Avisos: sí</button>
+    <button class="btn alt" type="button" id="drawerMenu">Salir al menú</button>
+  </div>
 </aside>
 
 <script>
@@ -847,7 +873,7 @@ function renderGame(){
   }).join('');
 
   $('rankBody').innerHTML=rankingHTML(false)+historyHTML();
-  $('tinfo').innerHTML=`<span class="tlog">${logText()}</span><span>Ronda ${G.round}${MODE==='online'?` · Mesa ${esc(code)}`:''}</span>`;
+  $('tinfo').innerHTML=`<span>Ronda ${G.round}${MODE==='online'?` · Mesa ${esc(code)}`:''}</span><span class="tlog">${logText()}</span>`;
   const dc=$('drawCtr'),live=canDraw();
   dc.hidden=G.phase==='pick';$('drawNum').textContent=G.pool.length;
   dc.classList.toggle('live',live);dc.classList.toggle('empty',!G.pool.length);
@@ -1063,11 +1089,12 @@ function seatMap(){
 function oppHTML(w,side){
   const p=G.players[w],n=G.hands[w].length,reveal=!!G.over,nm=esc(p.name)+(p.cpu&&MODE==='online'?' · CPU':'');
   const tiles=reveal?G.hands[w].map(t=>tileHTML(t[0],t[1],'v','tiny')).join(''):'<i></i>'.repeat(n);
+  const step=side==='T'?Math.max(6,Math.min(22,280/Math.max(1,n))):Math.max(5,Math.min(19,190/Math.max(1,n)));
   const turn=G.turn===w&&!G.over&&G.phase!=='pick';
   const win=G.over&&G.over.winner===w;
   return `<div class="opp ${side}${turn?' turn':''}${reveal?' shown':''}${win?' win':''}" aria-label="${nm}: ${n} fichas">
     <span class="opill"><span class="onm">${nm}</span><span class="osc" data-score="${w}">${shownScore(w)}<small>/${GOAL}</small></span><span class="oc">${reveal?'='+pipCount(G.hands[w]):n}</span></span>
-    <span class="ofan">${tiles}</span></div>`;
+    <span class="ofan" style="--step:${step.toFixed(1)}px">${tiles}</span></div>`;
 }
 function renderOpps(){
   const m=seatMap();
@@ -1106,6 +1133,12 @@ function runWatch(){
   });
   setTimeout(runWatch,450+job.drawn.length*750+450);
 }
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('#drawerMenu,#drawerRulesBtn,#drawerBell');if(!b)return;
+  if(b.id==='drawerMenu'){setDrawer(false);$('menuBtn').click()}
+  else if(b.id==='drawerRulesBtn'){const r=$('drawerRules');if(r.hidden)r.innerHTML=$('how').innerHTML;r.hidden=!r.hidden;b.textContent=r.hidden?'Reglas':'Ocultar reglas'}
+  else{$('bellBtn').click();setTimeout(()=>{b.textContent=$('bellBtn').textContent},0)}
+});
 let mixKey=null;
 function renderPick(){
   const sheet=$('pickSheet');
@@ -1196,6 +1229,7 @@ function historyHTML(){
     `<li><span>Ronda ${x.r}: ${x.w==null?'empate en el cierre':`<b>${x.w===me?'tú':esc(G.players[x.w].name)}</b> ${x.why==='cierre'?'(cierre)':'(dominó)'}`}</span><span class="g">${x.w==null?'0':'+'+x.pts}</span></li>`).join('')}</ul></div>`;
 }
 function setDrawer(on){
+  $('drawerBell').hidden=MODE!=='online';$('drawerBell').textContent=$('bellBtn').textContent;
   $('drawer').classList.toggle('on',on);$('scrim').classList.toggle('on',on);
   $('rankTab').setAttribute('aria-expanded',on);
   if(on)$('closeRank').focus({preventScroll:true});
