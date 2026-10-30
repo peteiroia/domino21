@@ -525,6 +525,10 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 /* Última ficha del rival, en dorado */
 .board .rival .tf{stroke:#f2c14e;stroke-width:.13;filter:drop-shadow(0 0 .12px #f2c14e)}
 .board .rival .ts{fill:rgba(242,193,78,.55)}
+.board .rival .tf{animation:rivalblink 1s ease-in-out infinite}
+.board .rival .ts{animation:rivalhalo 1s ease-in-out infinite}
+@keyframes rivalblink{0%,100%{stroke:#f2c14e;stroke-width:.17;fill:#fff6dc}50%{stroke:#fff;stroke-width:.04;fill:var(--ivory)}}
+@keyframes rivalhalo{0%,100%{fill:rgba(242,193,78,.8)}50%{fill:rgba(242,193,78,.15)}}
 /* Reverso: escudo más pequeño y borde dorado */
 .back,.hb,.pb,.ofan > i,.drawctr .dcb{background:#0b33b6 var(--wm) center/70% auto no-repeat!important;box-shadow:inset 0 0 0 1.5px var(--gold),inset 0 0 0 3px rgba(255,255,255,.18),1px 2px 3px rgba(0,0,0,.4)}
 .hb:hover,.hb:focus-visible{box-shadow:inset 0 0 0 1.5px var(--gold),0 0 0 3px var(--brass),3px 6px 10px rgba(0,0,0,.5)}
