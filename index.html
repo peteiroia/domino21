@@ -1966,10 +1966,10 @@ function hostOpen(c,doc,fresh){
   netStatus(fresh?'Creando la partida…':'Recuperando tu partida…');
   const go=()=>{
     if(netRole!=='host')return;
-    const p=peer=new Peer(PREFIX+code);
-    p.on('open',()=>{if(p!==peer)return;openTries=0;netStatus('');saveHost();onDoc(hostDoc)});
+    const p=peer=new Peer(hostIdOf(code,hostDoc.slot||0));
+    p.on('open',()=>{if(p!==peer)return;openTries=0;netStatus('');saveHost();onDoc(hostDoc);hostOnlineBroadcast()});
     p.on('connection',conn=>{
-      conn.on('data',m=>hostMsg(conn,m));
+      conn.on('data',m=>{conn._seen=Date.now();hostMsg(conn,m)});conn._seen=Date.now();
       const drop=()=>{hostConns.delete(conn);hostOnlineBroadcast()};
       conn.on('close',drop);conn.on('error',drop);
     });
@@ -1979,8 +1979,9 @@ function hostOpen(c,doc,fresh){
       if(e.type==='unavailable-id'){
         try{p.destroy()}catch(x){}
         if(fresh){code=genCode();hostDoc.code=code;go();return}
-        if(++openTries>30){netStatus('No se pudo recuperar la partida. Inténtalo más tarde.');return}
-        netStatus('Recuperando tu partida… (puede tardar un minuto)');setTimeout(go,4000);return;
+        // Ese sitio de mesa está ocupado: probablemente otro jugador ha seguido la partida. Entramos como invitado.
+        if(++openTries>20){netStatus('No se pudo recuperar la partida. Inténtalo más tarde.');return}
+        guestJoin(code,true,true);return;
       }
       if(e.type==='browser-incompatible'){netStatus('Este navegador no permite jugar online. Prueba con Chrome o Safari actualizados.');return}
       if(['network','server-error','socket-error','socket-closed'].includes(e.type)){
@@ -1993,6 +1994,7 @@ function hostOpen(c,doc,fresh){
 }
 function hostMsg(conn,m){
   if(!m||typeof m!=='object')return;
+  if(m.t==='ping'){try{conn.send({t:'pong'})}catch(e){}return}
   if(m.t==='hello'&&typeof m.id==='string'){
     hostConns.set(conn,m.id.slice(0,40));setTimeout(hostOnlineBroadcast,50);
     if(!hostApply(m.id,{t:'join',name:m.name}))try{conn.send({t:'doc',d:hostDoc})}catch(e){}
@@ -2022,43 +2024,84 @@ function hostApply(from,a){
 let onlineIds=null;
 function hostOnlyOff(){const h=G&&G.host;return (onlineIds||[]).filter(id=>id!==h)}
 /* ----- Invitado ----- */
-function guestJoin(c,resuming){
+/* La mesa vive en el móvil de quien hace de anfitrión. Si se va, el otro jugador sigue con la mesa (relevo). */
+const hostIdOf=(c,slot)=>PREFIX+c+(slot?'-b':'');
+let guestDoc=null,guestSlot=0,lastHeard=0,probeFails=0,takeoverT=null,fallbackHost=false;
+function guestJoin(c,resuming,fallback){
   leaveNet(true);
-  netRole='guest';MODE='online';code=c;everConnected=!!resuming;
-  if(resuming){show('lobby');$('scrLobby').innerHTML=`<div class="tag">Partida ${esc(c)}</div><p class="muted">Esperando a que quien creó la partida vuelva a abrir la app… En cuanto entre, seguís jugando donde lo dejasteis.</p><div class="actions" style="justify-content:flex-start"><button class="btn alt" type="button" id="leaveBtn">Salir</button></div>`}
+  netRole='guest';MODE='online';code=c;everConnected=!!resuming;fallbackHost=!!fallback||!!savedHost(c);
+  const saved=savedHost(c);guestDoc=saved||guestDoc;guestSlot=(guestDoc&&guestDoc.slot)||0;probeFails=0;
+  if(resuming&&!G){show('lobby');$('scrLobby').innerHTML=`<div class="tag">Partida ${esc(c)}</div><p class="muted">Volviendo a la partida…</p><div class="actions" style="justify-content:flex-start"><button class="btn alt" type="button" id="leaveBtn">Salir</button></div>`}
   store('d21last',c);store('d21role','guest');resumeCode=c;
-  netStatus('Conectando con la partida '+c+'…');
+  if(!resuming)netStatus('Conectando con la partida '+c+'…');
   const p=peer=new Peer();
   p.on('open',()=>{if(p===peer)connectToHost()});
-  p.on('disconnected',()=>{if(p===peer&&!p.destroyed)setTimeout(()=>{try{p.reconnect()}catch(e){}},1500)});
+  p.on('disconnected',()=>{if(p===peer&&!p.destroyed)setTimeout(()=>{try{p.reconnect()}catch(e){}},800)});
   p.on('error',e=>{
     if(p!==peer)return;
-    if(e.type==='peer-unavailable'){
-      if(!everConnected){failJoin('No hay ninguna partida abierta con el código '+c+'. Comprueba el código o pide a quien la creó que tenga la partida abierta.');return}
-      onlineIds=hostOnlyOff();if(G)renderGame();scheduleRetry(4000);return;
-    }
+    if(e.type==='peer-unavailable'){hostMissing();return}
     if(e.type==='browser-incompatible'){failJoin('Este navegador no permite jugar online. Prueba con Chrome o Safari actualizados.');return}
-    netStatus('Problema de conexión. Reintentando…');scheduleRetry(3000);
+    scheduleRetry(1500);
   });
+}
+/* Nadie contesta en el sitio de la mesa: probamos el otro sitio; si tampoco, seguimos nosotros con la mesa */
+function hostMissing(){
+  if(!everConnected){failJoin('No hay ninguna partida abierta con el código '+code+'. Comprueba el código o pide a quien la creó que tenga la partida abierta.');return}
+  probeFails++;guestSlot=1-guestSlot;
+  if(G){onlineIds=hostOnlyOff();renderGame()}
+  if(probeFails>=2&&iShouldTakeOver()){takeOver();return}
+  scheduleRetry(probeFails<4?400:2000);
+}
+function iShouldTakeOver(){
+  const d=guestDoc||savedHost(code);if(!d||d.status==='closed')return false;
+  if(!fallbackHost&&d.status!=='playing')return false;
+  const n=d.players.length,hi=d.players.findIndex(p=>p.id===d.host);
+  const alive=onlineIds||d.players.map(p=>p.id);
+  for(let k=1;k<=n;k++){const p=d.players[(hi+k)%n];if(p.cpu||p.id===d.host)continue;if(p.id===myId)return true;if(alive.includes(p.id))return false}
+  return true;
+}
+function takeOver(){
+  const d=clone(guestDoc||savedHost(code));
+  d.host=myId;d.slot=1-(d.slot||0);
+  netStatus('');
+  hostOpen(code,d,false);
 }
 function connectToHost(){
   if(netRole!=='guest'||!peer||peer.destroyed)return;
   try{if(guestConn)guestConn.close()}catch(e){}
-  const conn=guestConn=peer.connect(PREFIX+code,{reliable:true});
-  conn.on('open',()=>{if(conn!==guestConn)return;everConnected=true;netStatus('');conn.send({t:'hello',id:myId,name:myName()})});
-  conn.on('data',m=>{if(conn!==guestConn||!m)return;if(m.t==='doc')onDoc(m.d);else if(m.t==='chat')chatIn(m);else if(m.t==='online'&&Array.isArray(m.ids)){onlineIds=m.ids;if(G&&!$('scrGame').hidden)renderGame()}});
-  conn.on('close',()=>{if(conn===guestConn&&netRole==='guest'){onlineIds=hostOnlyOff();if(G)renderGame();scheduleRetry(2500)}});
+  const conn=guestConn=peer.connect(hostIdOf(code,guestSlot),{reliable:true});
+  const t0=setTimeout(()=>{if(conn===guestConn&&!conn.open){try{conn.close()}catch(e){}hostMissing()}},2500);
+  conn.on('open',()=>{clearTimeout(t0);if(conn!==guestConn)return;everConnected=true;probeFails=0;lastHeard=Date.now();netStatus('');conn.send({t:'hello',id:myId,name:myName()})});
+  conn.on('data',m=>{if(conn!==guestConn||!m)return;lastHeard=Date.now();
+    if(m.t==='doc'){guestDoc=m.d;guestSlot=m.d.slot||0;store('d21host',JSON.stringify({code,doc:m.d}));onDoc(m.d)}
+    else if(m.t==='chat')chatIn(m);
+    else if(m.t==='online'&&Array.isArray(m.ids)){onlineIds=m.ids;if(G&&!$('scrGame').hidden)renderGame()}});
+  conn.on('close',()=>{clearTimeout(t0);if(conn===guestConn&&netRole==='guest'){guestConn=null;if(G){onlineIds=hostOnlyOff();renderGame()}scheduleRetry(600)}});
   conn.on('error',()=>{});
 }
 function scheduleRetry(ms){
   clearTimeout(retryT);
   retryT=setTimeout(()=>{
     if(netRole!=='guest')return;
-    if(!peer||peer.destroyed){guestJoin(code);return}
-    if(peer.disconnected){try{peer.reconnect()}catch(e){}scheduleRetry(3000);return}
+    if(!peer||peer.destroyed){guestJoin(code,true);return}
+    if(peer.disconnected){try{peer.reconnect()}catch(e){}scheduleRetry(1500);return}
     connectToHost();
   },ms);
 }
+/* Latido: si el anfitrión deja de responder, se nota en segundos y no hay que esperar */
+setInterval(()=>{
+  if(netRole==='guest'&&guestConn&&guestConn.open){
+    try{guestConn.send({t:'ping'})}catch(e){}
+    if(lastHeard&&Date.now()-lastHeard>6500){const c=guestConn;guestConn=null;try{c.close()}catch(e){}if(G){onlineIds=hostOnlyOff();renderGame()}scheduleRetry(200)}
+  }
+  if(netRole==='host'){let ch=false;for(const c of hostConns.keys()){if(c._seen&&Date.now()-c._seen>10000){hostConns.delete(c);try{c.close()}catch(e){}ch=true}}if(ch)hostOnlineBroadcast();
+    // ¿Me he quedado solo en la mesa? Puede que el otro jugador siga la partida en el otro sitio: lo compruebo de vez en cuando
+    const others=hostDoc&&hostDoc.status==='playing'&&hostDoc.players.some(p=>!p.cpu&&p.id!==myId);
+    const open=[...hostConns.keys()].some(c=>c.open);
+    if(others&&!open){aloneSince=aloneSince||Date.now();if(Date.now()-aloneSince>(lastProbe?20000:5000)){aloneSince=0;lastProbe=Date.now();guestJoin(code,true,true)}}else aloneSince=0;
+  }
+},3000);
+let aloneSince=0,lastProbe=0;
 function failJoin(msg){
   leaveNet();store('d21last',null);store('d21role',null);resumeCode=null;
   show('menu');renderOnlineBox();$('menuErr').textContent=msg;
@@ -2102,7 +2145,7 @@ async function joinTable(c){
   inviteCode=null;
   try{if(location.hash)history.replaceState(null,'',location.pathname+location.search)}catch(e){}
   const mine=savedHost(c);
-  if(mine)hostOpen(c,mine,false);else guestJoin(c);
+  if(mine)guestJoin(c,true,true);else guestJoin(c);
 }
 
 function renderLobby(){
@@ -2150,9 +2193,10 @@ function leaveNet(keepMode){
 }
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden||!netRole)return;
-  if(!peer||peer.destroyed){if(netRole==='host')hostOpen(code,hostDoc,false);else guestJoin(code);return}
+  if(!peer||peer.destroyed){if(netRole==='host')guestJoin(code,true,true);else guestJoin(code,true);return}
   if(peer.disconnected){try{peer.reconnect()}catch(e){}}
-  if(netRole==='guest'&&(!guestConn||!guestConn.open))scheduleRetry(300);
+  if(netRole==='guest'&&(!guestConn||!guestConn.open))scheduleRetry(50);
+  if(netRole==='host'&&hostDoc&&hostDoc.status==='playing'&&![...hostConns.keys()].some(c=>c.open)){guestJoin(code,true,true)}
 });
 
 /* ---------- Avisos de turno (online) ---------- */
@@ -2310,10 +2354,7 @@ const hashCode=((location.hash||'').slice(1).match(/^[a-zA-Z]{4}$/)||[])[0];
 if(hashCode)inviteCode=hashCode.toUpperCase();
 setTab(inviteCode?'online':(load('d21tab')||'online'));
 show('menu');renderOnlineBox();
-function resumeOnline(c,role){
-  if(role==='host'&&savedHost(c))hostOpen(c,savedHost(c),false);
-  else guestJoin(c,true);
-}
+function resumeOnline(c,role){guestJoin(c,true,true)}
 function askResume(c,role){
   const doc=role==='host'?savedHost(c):null;
   const who=doc?doc.players.filter(p=>p.id!==myId).map(p=>p.name).join(', '):'';
