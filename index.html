@@ -1112,9 +1112,6 @@ function renderGame(){
       hint=`Turno de ${label(G.turn)}…`;
     }
   }
-  if(MODE==='online'&&isHost()&&!G.over&&G.phase!=='pick'&&G.turn!==me&&!G.players[G.turn].cpu){
-    act+=`<button class="btn alt" type="button" id="takeoverBtn">¿${esc(G.players[G.turn].name)} no está? Que juegue la CPU</button>`;
-  }
   $('actions').innerHTML=act;
   const myT=me>=0&&G.turn===me&&!G.over&&G.phase!=='pick'&&!G.players[me].cpu;
   $('yourTurn').hidden=!!G.over||G.phase==='pick'||G.turn<0;
