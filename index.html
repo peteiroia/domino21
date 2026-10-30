@@ -360,6 +360,23 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
 .hb.picked{z-index:3;transform:translate(-50%,-50%) rotate(var(--a)) scale(1.3);box-shadow:0 0 0 3px var(--brass),0 0 18px rgba(226,171,69,.9),4px 10px 14px rgba(0,0,0,.5);transition:transform .3s cubic-bezier(.2,1.4,.4,1),box-shadow .3s}
 .hb.gone{opacity:0;transform:translate(-50%,-260%) rotate(0deg) scale(.8);transition:transform .35s ease-in,opacity .35s ease-in}
 @media (orientation:landscape) and (max-height:540px){.ofan i{width:10px;height:18px;margin-left:-3px}.opp{padding:2px 10px;font-size:11px}.oc{font-size:14px}}
+.bigpts{display:flex;align-items:baseline;justify-content:center;gap:10px;flex-wrap:wrap;padding:6px 0}
+.bigpts .bp{font-family:var(--display);font-size:clamp(46px,14vw,72px);line-height:1;color:var(--brass);text-shadow:0 3px 0 var(--felt-edge),0 0 22px rgba(226,171,69,.55);animation:slam .6s cubic-bezier(.2,1.6,.4,1) both}
+.bigpts .bpl{font-weight:800;color:var(--ink);font-size:16px}
+.bigpts.fly .bp{animation:flyup .9s ease-in forwards}
+.bigpts.done .bp{opacity:.35;text-shadow:none}
+@keyframes flyup{0%{transform:none;opacity:1}30%{transform:scale(1.25)}100%{transform:translateY(160px) scale(.4);opacity:0}}
+.reveal{display:grid;gap:6px;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:10px;padding:10px}
+.rv{display:grid;grid-template-columns:minmax(0,5.5em) minmax(0,1fr) auto;align-items:center;gap:8px}
+.rv.win .rvn{color:var(--brass)}
+.rvn{font-weight:800;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rvt{display:flex;flex-wrap:wrap;gap:3px;min-width:0}
+.rvt em{color:var(--muted);font-size:12px}
+.rvp{font-family:var(--display);font-size:16px;color:var(--ivory);font-variant-numeric:tabular-nums}
+.xs{--u:11px}
+.btn.sum{font-size:18px;padding:14px 28px;box-shadow:0 0 0 3px rgba(226,171,69,.3),0 0 22px rgba(226,171,69,.6);animation:glowb 1s ease-in-out infinite alternate}
+@keyframes glowb{to{box-shadow:0 0 0 6px rgba(226,171,69,.15),0 0 30px rgba(226,171,69,.9)}}
+.rank .big.pop{animation:pop .5s ease}
 </style>
 </head>
 <body>
@@ -685,14 +702,14 @@ function logText(){
 
 function renderGame(){
   $('seats').innerHTML=G.players.map((p,w)=>{
-    let cells='';for(let k=1;k<=GOAL;k++)cells+=`<i class="${G.score[w]>=k?'on':''}"></i>`;
+    const sw=shownScore(w);let cells='';for(let k=1;k<=GOAL;k++)cells+=`<i class="${sw>=k?'on':''}"></i>`;
     const nm=w===me?'Tú':esc(p.name)+(p.cpu&&MODE==='online'?' · CPU':'');
     const n=G.hands[w].length;
     const tiles=w===me?poolHTML()
       :`<span class="cnt">${n} ficha${n===1?'':'s'} en la mano</span>`;
     return `<div class="seat ${G.turn===w&&!G.over?'turn':''}">
       <div class="seat-top"><span class="who">${nm}</span>
-      <span class="pts" data-score="${w}">${G.score[w]}<small> / ${GOAL}</small></span></div>
+      <span class="pts" data-score="${w}">${sw}<small> / ${GOAL}</small></span></div>
       <div class="track" aria-label="${G.score[w]} de ${GOAL} puntos">${cells}</div>${tiles}</div>`;
   }).join('');
 
@@ -737,21 +754,22 @@ function renderGame(){
   $('actions').innerHTML=act;$('hint').textContent=hint;
 
   if(G.over){
-    const o=G.over,w=o.winner,sc=G.players.map((p,i)=>`${i===me?'tú':esc(p.name)} ${G.score[i]}`).join(', ');
-    const hostBtns=isHost();
-    const wait=MODE==='online'&&!hostBtns?'<p>Esperando a que el anfitrión continúe…</p>':'';
+    const o=G.over,w=o.winner,r=G.result||{pips:[],total:0,pts:0},summed=isSummed();
+    const hostBtns=isHost(),hostName=esc((G.players.find(p=>p.id===G.host)||{name:'el anfitrión'}).name);
+    const title=o.why==='cierre'?'Mesa cerrada':(w===me?'¡Has dominado!':`¡Domina ${label(w)}!`);
     const why=o.why==='cierre'
-      ?`<p>La mesa se cerró: nadie puede jugar. Gana la ronda quien suma menos en sus fichas.</p>`
-      :`<p>${w===me?'Te quedaste':`${label(w)} se quedó`} sin fichas.</p>`;
-    let title,btns;
-    if(o.type==='game'){
-      title=w===me?'¡Has ganado!':`Gana ${label(w)}`;
-      btns=`<div class="actions">${hostBtns?'<button class="btn" type="button" id="againBtn">Revancha</button>':''}<button class="btn alt" type="button" id="toMenuBtn">Menú</button></div>`;
-    } else {
-      title=o.why==='cierre'?'Mesa cerrada':(w===me?'Dominaste':`${label(w)} domina`);
-      btns=hostBtns?'<div class="actions"><button class="btn" type="button" id="nextBtn">Siguiente ronda</button></div>':'';
-    }
-    $('card').innerHTML=`<h2>${title}</h2>${why}${resultHTML()}<div class="tag">${o.type==='game'?'Clasificación final':'Clasificación'}</div>${rankingHTML(true)}${wait}${btns}`;
+      ?`<p>Nadie puede jugar. Gana la partidilla quien suma menos en sus fichas${w==null?', pero hay empate':''}.</p>`
+      :`<p>${w===me?'Te has quedado':`${label(w)} se ha quedado`} sin fichas.</p>`;
+    const big=w!=null&&r.pts?`<div class="bigpts${summed?' done':''}"><span class="bp">+${r.pts}</span><span class="bpl">punto${r.pts===1?'':'s'} para ${w===me?'ti':label(w)}</span></div>`
+      :'<div class="bigpts"><span class="bpl">Esta partidilla nadie suma puntos.</span></div>';
+    const hands=`<div class="reveal">${G.players.map((p,i)=>`<div class="rv${i===w?' win':''}"><span class="rvn">${i===me?'Tú':esc(p.name)}</span><span class="rvt">${G.hands[i].map(t=>tileHTML(t[0],t[1],'h','xs')).join('')||'<em>sin fichas</em>'}</span><span class="rvp">${r.pips[i]??0}</span></div>`).join('')}
+      <p class="muted" style="margin:0">Total en fichas: <b>${r.total}</b>. Cada 10 o fracción es 1 punto: ${r.total} → <b>${r.pts}</b>.</p></div>`;
+    let btns='';
+    if(!summed&&w!=null&&r.pts)btns=`<div class="actions"><button class="btn big sum" type="button" id="sumBtn">Sumar puntos</button></div>`;
+    else if(o.type==='game')btns=`<div class="actions">${hostBtns?'<button class="btn" type="button" id="againBtn">Revancha</button>':''}<button class="btn alt" type="button" id="toMenuBtn">Menú</button></div>`;
+    else if(hostBtns)btns=`<div class="actions"><button class="btn big" type="button" id="nextBtn">Siguiente partidilla</button></div>`;
+    else btns=`<p class="muted" style="text-align:center">Esperando a que ${hostName} empiece la siguiente partidilla…</p>`;
+    $('card').innerHTML=`<h2>${title}</h2>${why}${big}${hands}<div class="tag">${o.type==='game'&&summed?'Clasificación final':'Clasificación'}</div>${rankingHTML(true)}${btns}`;
     $('modal').hidden=false;
   } else $('modal').hidden=true;
 
@@ -894,7 +912,7 @@ function confetti(){
   confT=requestAnimationFrame(step);
 }
 function checkChamp(){
-  if(G&&G.over&&G.over.type==='game'&&G.over.winner!=null){
+  if(G&&G.over&&G.over.type==='game'&&G.over.winner!=null&&isSummed()){
     const key=(code||'solo')+':'+G.seq+':'+G.over.winner;
     if(key!==champKey){champKey=key;showChamp(G.over.winner)}
   } else if(celebrating)hideChamp();
@@ -974,22 +992,52 @@ function renderDraw(){
   $('drawCount').textContent=G.pool.length===1?'Queda 1 ficha':`Quedan ${G.pool.length} fichas`;
   $('heap').innerHTML=heapButtons(G.pool,'data-pool',true,'Robar esta ficha');
 }
+/* "Sumar puntos": los puntos de la partidilla se ven antes de sumarse al marcador */
+let summedKey=null;
+const roundKey=()=>G?G.round+':'+G.seq:'';
+function isSummed(){return !G||!G.over||summedKey===roundKey()||!(G.result&&G.result.winner!=null&&G.result.pts)}
+function shownScore(i){
+  if(!G.over||isSummed())return G.score[i];
+  const r=G.result;return G.score[i]-(r&&r.winner===i?r.pts:0);
+}
+function sumPoints(){
+  if(!G||!G.over||isSummed())return;
+  const key=roundKey(),w=G.result.winner,from=shownScore(w),to=G.score[w];
+  $('sumBtn').disabled=true;$('sumBtn').textContent='Sumando…';
+  document.querySelector('.bigpts')?.classList.add('fly');
+  const els=()=>[...document.querySelectorAll(`[data-score-row="${w}"],[data-score="${w}"]`)];
+  let v=from;const steps=Math.max(1,to-from);
+  const tick=()=>{
+    v++;els().forEach(el=>{el.firstChild.nodeValue=String(v);el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop')});
+    clack(1);
+    if(v<to)setTimeout(tick,Math.min(260,900/steps));
+    else setTimeout(()=>{
+      if(roundKey()!==key)return;
+      summedKey=key;
+      try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}
+      renderGame();
+      if(G.over.type!=='game'&&isHost())setTimeout(()=>{if(G&&G.over&&roundKey()===key)goNext()},650);
+    },500);
+  };
+  setTimeout(tick,350);
+}
 function rankingHTML(withGain){
   const r=G.result,hist=G.history||[];
   const wins=G.players.map((_,i)=>hist.filter(h=>h.w===i).length);
-  const order=G.players.map((p,i)=>i).sort((a,b)=>G.score[b]-G.score[a]||wins[b]-wins[a]||a-b);
+  const sc=G.players.map((_,i)=>shownScore(i));
+  const order=G.players.map((p,i)=>i).sort((a,b)=>sc[b]-sc[a]||wins[b]-wins[a]||a-b);
   let pos=0,prev=null;
   const rows=order.map((i,k)=>{
-    if(G.score[i]!==prev){pos=k+1;prev=G.score[i]}
-    const gain=withGain&&r&&r.winner===i&&r.pts?`<span class="gain">+${r.pts}</span> `:'';
+    if(sc[i]!==prev){pos=k+1;prev=sc[i]}
+    const gain=withGain&&G.over&&isSummed()&&r&&r.winner===i&&r.pts?`<span class="gain">+${r.pts}</span> `:'';
     const nm=i===me?'Tú':esc(G.players[i].name);
-    const pct=Math.min(100,G.score[i]/GOAL*100);
-    return `<tr class="${pos===1&&G.score[i]>0?'lead':''} ${i===me?'me':''}"><td class="pos">${pos}</td>
+    const pct=Math.min(100,sc[i]/GOAL*100);
+    return `<tr class="${pos===1&&sc[i]>0?'lead':''} ${i===me?'me':''}"><td class="pos">${pos}</td>
       <td class="nm">${nm}<span class="mini"><i style="width:${pct}%"></i></span></td>
       <td class="num">${wins[i]}</td><td class="num">${G.hands[i].length}</td>
-      <td class="num">${gain}<span class="big">${G.score[i]}</span></td></tr>`;
+      <td class="num">${gain}<span class="big" data-score-row="${i}">${sc[i]}</span></td></tr>`;
   }).join('');
-  const lead=G.score[order[0]],left=GOAL-lead;
+  const lead=sc[order[0]],left=GOAL-lead;
   const note=withGain?'':`<p class="muted">${lead>0&&left>0?`${order[0]===me?'Vas en cabeza; te':esc(G.players[order[0]].name)+' va en cabeza; le'} faltan ${left} para ganar.`:'Gana quien llegue primero a 21 puntos.'}</p>`;
   return `<div style="overflow-x:auto"><table class="rank"><thead><tr><th></th><th>Jugador</th><th class="num" title="Rondas ganadas">Rondas</th><th class="num" title="Fichas en la mano">Fichas</th><th class="num">Puntos</th></tr></thead><tbody>${rows}</tbody></table></div>${note}`;
 }
@@ -1444,12 +1492,14 @@ async function toggleBell(){
   if(alertsOn){ding();try{if('Notification' in window&&Notification.permission==='default')await Notification.requestPermission()}catch(e){}}
 }
 
+function goNext(){play({t:'next'})}
 /* ---------- Eventos ---------- */
 document.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
   if(b.classList.contains('ht')){tapTile(+b.dataset.i);return}
   if(b.dataset.side&&sel!==null){play({t:'move',i:sel,side:b.dataset.side});return}
   if(b.id==='champClose'){hideChamp();return}
+  if(b.id==='sumBtn'){sumPoints();return}
   if(b.dataset.pick){if(G&&G.phase==='pick'&&me>=0&&G.hands[me].length<PICK){b.disabled=true;b.classList.add('taken');play({t:'pick',v:b.dataset.pick})}return}
   if(b.id==='hideDraw'){drawHidden=true;renderDraw();return}
   if(b.dataset.openpool){drawHidden=false;renderDraw();return}
