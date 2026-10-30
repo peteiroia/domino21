@@ -556,6 +556,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 .namebox{background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.22);border-radius:18px;padding:12px 14px}
 .cpunames{display:grid;gap:6px}
 .cpunames .tag{margin-bottom:2px}
+#scrGame .seats,#scrGame .rules{display:none}
 .micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:18;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .micbtn .mic{width:10px;height:15px;border-radius:5px;background:var(--brass);box-shadow:0 0 0 2px rgba(226,171,69,.35)}
 .micbtn.rec{background:#d93b3b;border-color:#ff9a9a}
@@ -1315,11 +1316,12 @@ function sumPoints(){
   };
   setTimeout(tick,350);
 }
+function myLabel(){const n=G&&me>=0&&G.players[me]&&G.players[me].name;return n&&n!=='Jugador'?esc(n):'Tú'}
 function rankingHTML(withGain){
   const r=G.result,hist=G.history||[];
   const groups=isPairs(G)?[[0,2],[1,3]]:G.players.map((_,i)=>[i]);
   const rowsData=groups.map(ids=>({ids,sc:shownScore(ids[0]),wins:hist.filter(h=>ids.includes(h.w)).length,tiles:ids.reduce((n,i)=>n+G.hands[i].length,0),
-    name:(isPairs(G)?ids.slice().sort((x,y)=>(y===me)-(x===me)):ids).map(i=>i===me?'Tú':esc(G.players[i].name)).join(' y '),mine:ids.includes(me)}));
+    name:(isPairs(G)?ids.slice().sort((x,y)=>(y===me)-(x===me)):ids).map(i=>i===me?myLabel():esc(G.players[i].name)).join(' y '),mine:ids.includes(me)}));
   rowsData.sort((a,b)=>b.sc-a.sc||b.wins-a.wins);
   let pos=0,prev=null;
   const rows=rowsData.map((d,k)=>{
@@ -1341,7 +1343,7 @@ function historyHTML(){
   const h=(G.history||[]).slice().reverse();
   if(!h.length)return `<div><div class="tag">Rondas</div><p class="muted">Ronda ${G.round} en juego. Aquí verás quién gana cada ronda y cuántos puntos se lleva.</p></div>`;
   return `<div><div class="tag" style="margin-bottom:6px">Rondas jugadas</div><ul class="hist">${h.map(x=>
-    `<li><span>Ronda ${x.r}: ${x.w==null?'empate en el cierre':`<b>${isPairs(G)?teamLabel(x.w):(x.w===me?'tú':esc(G.players[x.w].name))}</b> ${x.why==='cierre'?'(cierre)':'(dominó)'}`}</span><span class="g">${x.w==null?'0':'+'+x.pts}</span></li>`).join('')}</ul></div>`;
+    `<li><span>Ronda ${x.r}: ${x.w==null?'empate en el cierre':`<b>${isPairs(G)?teamLabel(x.w).replace(/^Tú\b/,myLabel()):(x.w===me?myLabel():esc(G.players[x.w].name))}</b> ${x.why==='cierre'?'(cierre)':'(dominó)'}`}</span><span class="g">${x.w==null?'0':'+'+x.pts}</span></li>`).join('')}</ul></div>`;
 }
 function setDrawer(on){
   $('drawerBell').hidden=MODE!=='online';$('drawerBell').textContent=$('bellBtn').textContent;
