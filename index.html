@@ -14,7 +14,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='7' fill='%230f2f86'/%3E%3Crect x='10' y='3' width='14' height='28' rx='3' fill='%23f4eddc'/%3E%3Cline x1='12' y1='17' x2='22' y2='17' stroke='%23c8962e'/%3E%3Ccircle cx='14' cy='8' r='1.6' fill='%230b33b6'/%3E%3Ccircle cx='20' cy='12' r='1.6' fill='%230b33b6'/%3E%3Ccircle cx='14' cy='22' r='1.6' fill='%23e2ab45'/%3E%3Ccircle cx='20' cy='22' r='1.6' fill='%23e2ab45'/%3E%3Ccircle cx='14' cy='27' r='1.6' fill='%23e2ab45'/%3E%3Ccircle cx='20' cy='27' r='1.6' fill='%23e2ab45'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='7' fill='%230f2f86'/%3E%3Crect x='10' y='3' width='14' height='28' rx='3' fill='%23f4eddc' stroke='%23c8962e'/%3E%3Cline x1='12' y1='17' x2='22' y2='17' stroke='%23c8962e'/%3E%3Ccircle cx='13.5' cy='7' r='1.6' fill='%230b33b6'/%3E%3Ccircle cx='17' cy='10.5' r='1.6' fill='%230b33b6'/%3E%3Ccircle cx='20.5' cy='14' r='1.6' fill='%230b33b6'/%3E%3Ccircle cx='13.5' cy='21' r='1.6' fill='%230b33b6'/%3E%3Ccircle cx='20.5' cy='21' r='1.6' fill='%230b33b6'/%3E%3Ccircle cx='17' cy='24.3' r='1.6' fill='%230b33b6'/%3E%3Ccircle cx='13.5' cy='27.6' r='1.6' fill='%230b33b6'/%3E%3Ccircle cx='20.5' cy='27.6' r='1.6' fill='%230b33b6'/%3E%3C/svg%3E">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Dominó del Dépor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -455,7 +455,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 .opp.L .ofan,.opp.R .ofan{flex-direction:column;padding:8px 6px 0}
 .opp.L .ofan > i,.opp.R .ofan > i{display:block;width:15px;height:26px;margin-top:-15px;transform:rotate(90deg);border-radius:2.5px;background:#0b33b6 var(--crest) center/cover;box-shadow:inset 0 0 0 1px rgba(255,255,255,.65),1px 1px 2px rgba(0,0,0,.45)}
 .opp.L .ofan > i:first-child,.opp.R .ofan > i:first-child{margin-top:0}
-.tiny{--u:15px}
+.tiny{--u:22px}
 .opp.L.shown .ofan,.opp.R.shown .ofan{display:grid;grid-template-columns:repeat(2,auto);gap:3px;padding:6px 4px 0}
 .opp.T.shown .ofan{gap:3px}
 .opp.shown .ofan{gap:2px;flex-wrap:wrap;justify-content:center}
@@ -480,7 +480,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
   .seatT{min-height:32px}
   .opp.T .ofan > i{width:13px;height:23px;margin-left:-5px}
   .opp.L .ofan > i,.opp.R .ofan > i{width:12px;height:21px;margin-top:-12px}
-  .tiny{--u:12px}
+  .tiny{--u:17px}
 }
 /* Clasificación ajustada a la pantalla */
 .drawer{width:min(360px,92vw)}
@@ -536,15 +536,15 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 @media (orientation:portrait){.opp.T{flex-direction:column;gap:4px}}
 /* Ventana de robar: lo que necesitas a la izquierda, lo que has robado a la derecha */
 .dcard:has(.drawgrid){width:min(860px,100%)}
-.drawgrid{display:grid;grid-template-columns:minmax(84px,auto) minmax(0,1fr) minmax(96px,auto);gap:10px;align-items:center}
+.drawgrid{display:grid;grid-template-columns:minmax(120px,auto) minmax(0,1fr) minmax(110px,auto);gap:10px;align-items:center}
 .drawgrid .heap{width:min(100%,calc((100dvh - 150px) * 10 / 8));justify-self:center}
 .needbox,.drawnbox{display:grid;justify-items:center;gap:6px;text-align:center}
 .nlab{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
 .nnums{display:grid;justify-items:center;gap:4px}
 .nnums i{font-style:normal;color:var(--muted);font-size:12px}
 .nn{display:flex;align-items:center;gap:6px}
-.nn b{font-family:var(--display);font-size:clamp(26px,6vh,40px);color:var(--brass);line-height:1}
-.bighalf{--u:clamp(30px,8vh,46px);border-radius:7px}
+.nn b{font-family:var(--display);font-size:clamp(36px,10vh,60px);color:var(--brass);line-height:1}
+.bighalf{--u:clamp(46px,14vh,78px);border-radius:9px}
 .bigt{--u:clamp(32px,9vh,52px)}
 .dverdict{font-weight:800;font-size:13px;padding:4px 10px;border-radius:999px}
 .dverdict.ok{background:#22c06b;color:#04361a}
@@ -553,6 +553,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 @media (orientation:portrait){.drawgrid{grid-template-columns:1fr 1fr;grid-template-areas:"h h" "n d"}.drawgrid .heap{grid-area:h}.needbox{grid-area:n}.drawnbox{grid-area:d}}
 .btn.cierre{font-size:20px;padding:14px 34px;background:linear-gradient(180deg,#ffdf8a,#e0a12f);animation:glowb .9s ease-in-out infinite alternate}
 #scrGame .actions .btn.cierre{font-size:16px;padding:12px 26px}
+.namebox{background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.05));border:1px solid rgba(255,255,255,.22);border-radius:18px;padding:12px 14px}
 </style>
 </head>
 <body>
@@ -561,7 +562,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 <div class="wrap">
   <header>
     <div class="brand">
-      <svg viewBox="0 0 34 34" aria-hidden="true"><g transform="rotate(-18 17 17)"><rect x="9" y="2" width="16" height="30" rx="3.5" fill="#f4eddc" stroke="#c8962e"/><line x1="12" y1="17" x2="22" y2="17" stroke="#c8962e" stroke-width="1.2"/><circle cx="13.5" cy="7" r="1.7" fill="#0b33b6"/><circle cx="17" cy="9.8" r="1.7" fill="#0b33b6"/><circle cx="20.5" cy="12.6" r="1.7" fill="#0b33b6"/><circle cx="13.5" cy="22" r="1.7" fill="#e2ab45"/><circle cx="20.5" cy="22" r="1.7" fill="#e2ab45"/><circle cx="13.5" cy="27.5" r="1.7" fill="#e2ab45"/><circle cx="20.5" cy="27.5" r="1.7" fill="#e2ab45"/></g></svg>
+      <svg viewBox="0 0 34 34" aria-hidden="true"><g transform="rotate(-18 17 17)"><rect x="9" y="2" width="16" height="30" rx="3.5" fill="#f4eddc" stroke="#c8962e"/><line x1="12" y1="17" x2="22" y2="17" stroke="#c8962e" stroke-width="1.2"/><circle cx="13.5" cy="6.5" r="1.6" fill="#0b33b6"/><circle cx="17" cy="9.8" r="1.6" fill="#0b33b6"/><circle cx="20.5" cy="13.1" r="1.6" fill="#0b33b6"/><circle cx="13.5" cy="21" r="1.6" fill="#0b33b6"/><circle cx="20.5" cy="21" r="1.6" fill="#0b33b6"/><circle cx="17" cy="24.4" r="1.6" fill="#0b33b6"/><circle cx="13.5" cy="27.8" r="1.6" fill="#0b33b6"/><circle cx="20.5" cy="27.8" r="1.6" fill="#0b33b6"/></g></svg>
       <h1>Dominó del <span>Dépor</span></h1>
     </div>
     <div class="hbtns">
@@ -581,6 +582,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 
   <!-- MENÚ -->
   <section id="scrMenu" class="modes">
+    <label class="f namebox">Tu nombre para la partida<input type="text" id="nameIn" maxlength="14" placeholder="Escribe tu nombre" autocomplete="nickname"></label>
     <div class="tabs" role="tablist">
       <button type="button" role="tab" data-tab="online" aria-selected="true">Online</button>
       <button type="button" role="tab" data-tab="solo" aria-selected="false">Contra la máquina</button>
@@ -588,7 +590,6 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
     <div class="mode online" id="paneOnline">
       <h2>Jugar online</h2>
       <p class="muted">Crea la partida, invita por WhatsApp y empieza sola en cuanto estéis todos. Nadie necesita cuenta ni app.</p>
-      <label class="f">Tu nombre<input type="text" id="nameIn" maxlength="14" placeholder="Ej. Lucía" autocomplete="nickname"></label>
       <div id="onlineBox">
         <p class="muted">Conectando…</p>
       </div>
@@ -913,7 +914,7 @@ function logText(){
 function renderGame(){
   $('seats').innerHTML=G.players.map((p,w)=>{
     const sw=shownScore(w);let cells='';for(let k=1;k<=GOAL;k++)cells+=`<i class="${sw>=k?'on':''}"></i>`;
-    const nm=w===me?'Tú':esc(p.name)+(p.cpu&&MODE==='online'?' · CPU':'');
+    const nm=w===me?(p.name&&p.name!=='Jugador'?esc(p.name):'Tú'):esc(p.name)+(p.cpu&&MODE==='online'?' · CPU':'');
     const n=G.hands[w].length;
     const tiles=w===me?''
       :`<span class="cnt">${n} ficha${n===1?'':'s'} en la mano</span>`;
@@ -937,7 +938,7 @@ function renderGame(){
     $('handTitle').textContent='Observando';
     $('hand').innerHTML='<p class="muted">Esta partida ya empezó. Puedes mirarla en directo.</p>';
   } else {
-    $('handTitle').innerHTML=`Tu mano · <span data-score="${me}">${shownScore(me)}</span>/${GOAL}${G.over?` · te quedan ${pipCount(G.hands[me])}`:''}`;
+    $('handTitle').innerHTML=`${G.players[me].name&&G.players[me].name!=='Jugador'?esc(G.players[me].name):'Tu mano'} · <span data-score="${me}">${shownScore(me)}</span>/${GOAL}${G.over?` · te quedan ${pipCount(G.hands[me])}`:''}`;
     const myTurn=G.turn===me&&!G.over&&!G.players[me].cpu;
     const playable=G.hands[me].map(t=>sidesFor(G,t).length>0);
     $('hand').innerHTML=G.hands[me].map((t,i)=>{
