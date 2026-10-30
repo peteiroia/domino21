@@ -522,6 +522,33 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 .opill em{font-style:normal;font-weight:700;color:var(--brass);font-size:.9em}
 .opp.win .opill,.opp.mate.win .opill{background:var(--brass);border-color:var(--brass);color:#0a1f5c}
 .opp.win .opill em{color:#0a1f5c}
+/* Última ficha del rival, en dorado */
+.board .rival .tf{stroke:#f2c14e;stroke-width:.13;filter:drop-shadow(0 0 .12px #f2c14e)}
+.board .rival .ts{fill:rgba(242,193,78,.55)}
+/* Reverso: escudo más pequeño y borde dorado */
+.back,.hb,.pb,.ofan > i,.drawctr .dcb{background:#0b33b6 var(--wm) center/70% auto no-repeat!important;box-shadow:inset 0 0 0 1.5px var(--gold),inset 0 0 0 3px rgba(255,255,255,.18),1px 2px 3px rgba(0,0,0,.4)}
+.hb:hover,.hb:focus-visible{box-shadow:inset 0 0 0 1.5px var(--gold),0 0 0 3px var(--brass),3px 6px 10px rgba(0,0,0,.5)}
+.hb.picked{box-shadow:inset 0 0 0 1.5px var(--gold),0 0 0 3px var(--brass),0 0 18px rgba(226,171,69,.9),4px 10px 14px rgba(0,0,0,.5)}
+@media (orientation:portrait){.opp.T{flex-direction:column;gap:4px}}
+/* Ventana de robar: lo que necesitas a la izquierda, lo que has robado a la derecha */
+.dcard:has(.drawgrid){width:min(860px,100%)}
+.drawgrid{display:grid;grid-template-columns:minmax(84px,auto) minmax(0,1fr) minmax(96px,auto);gap:10px;align-items:center}
+.drawgrid .heap{width:min(100%,calc((100dvh - 150px) * 10 / 8));justify-self:center}
+.needbox,.drawnbox{display:grid;justify-items:center;gap:6px;text-align:center}
+.nlab{font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.nnums{display:grid;justify-items:center;gap:4px}
+.nnums i{font-style:normal;color:var(--muted);font-size:12px}
+.nn{display:flex;align-items:center;gap:6px}
+.nn b{font-family:var(--display);font-size:clamp(26px,6vh,40px);color:var(--brass);line-height:1}
+.bighalf{--u:clamp(30px,8vh,46px);border-radius:7px}
+.bigt{--u:clamp(32px,9vh,52px)}
+.dverdict{font-weight:800;font-size:13px;padding:4px 10px;border-radius:999px}
+.dverdict.ok{background:#22c06b;color:#04361a}
+.dverdict.no{background:rgba(255,143,98,.2);color:#ffd2c0;border:1px solid var(--hot)}
+.dph{width:clamp(32px,9vh,52px);aspect-ratio:1/2;border:2px dashed var(--line);border-radius:7px}
+@media (orientation:portrait){.drawgrid{grid-template-columns:1fr 1fr;grid-template-areas:"h h" "n d"}.drawgrid .heap{grid-area:h}.needbox{grid-area:n}.drawnbox{grid-area:d}}
+.btn.cierre{font-size:20px;padding:14px 34px;background:linear-gradient(180deg,#ffdf8a,#e0a12f);animation:glowb .9s ease-in-out infinite alternate}
+#scrGame .actions .btn.cierre{font-size:16px;padding:12px 26px}
 </style>
 </head>
 <body>
@@ -640,7 +667,11 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
   <div class="dcard" role="dialog" aria-modal="true" aria-labelledby="drawTitle">
     <div class="dhead"><h2 id="drawTitle">¡A robar!</h2><button class="ghost" type="button" id="hideDraw">Ver la mesa</button></div>
     <p class="muted" style="margin:0">No tienes jugada. Toca la ficha que quieras robar. <span id="drawCount"></span>.</p>
-    <div class="heap pitch" id="heap"></div>
+    <div class="drawgrid">
+      <div class="needbox" id="needBox"></div>
+      <div class="heap pitch" id="heap"></div>
+      <div class="drawnbox" id="drawnBox"></div>
+    </div>
   </div>
 </div>
 <div class="turnflash" id="turnflash" hidden aria-live="assertive">¡Te toca!</div>
@@ -706,7 +737,7 @@ function deal(g){
   const set=[];for(let a=0;a<=6;a++)for(let b=a;b<=6;b++)set.push([a,b]);
   shuffle(set);
   g.pool=set; g.hands=g.players.map(()=>[]);
-  g.chain=[]; g.passes=0; g.round++; g.over=null; g.origin=0; g.lastSide=null; g.result=null;
+  g.chain=[]; g.plays=[]; g.passes=0; g.round++; g.over=null; g.origin=0; g.lastSide=null; g.result=null;
   g.phase='pick'; g.turn=-1; g.mustSix=false; g.openD=null; g.dealN=(g.dealN||0)+1;
   g.log={k:'mix',r:g.round};
   g.seq=(g.seq||0)+1;
@@ -767,6 +798,7 @@ function roundScore(g,winner,why){
 }
 function applyMove(g,who,idx,side,drew=0){
   const t=g.hands[who].splice(idx,1)[0];
+  (g.plays=g.plays||[]).push({w:who,c:''+t[0]+t[1]});
   g.mustSix=false;
   if(side==='L'&&g.chain.length)g.origin=(g.origin||0)+1;
   g.chain=place(g.chain,t,side);
@@ -915,8 +947,9 @@ function renderGame(){
       if(sel!==null&&G.hands[me][sel]){
         hint='Vale por los dos lados: toca en el campo la ficha del extremo donde quieres ponerla.';
       } else if(!playable.some(Boolean)){
-        if(G.pool.length)hint='No tienes jugada: pulsa «¡A robar!», arriba a la izquierda del campo.';
-        else{act='<button class="btn alt" type="button" id="passBtn">Pasar</button>';hint='No tienes jugada y no quedan fichas para robar.'}
+        if(G.pool.length)hint='No tienes jugada: pulsa «¡A robar!», abajo a la derecha del campo.';
+        else if(G.passes>=G.players.length-1){act='<button class="btn big cierre" type="button" id="passBtn">¡Cierre!</button>';hint='Nadie puede jugar: pulsa ¡Cierre! para cerrar la mesa y contar las fichas.'}
+        else{act='<button class="btn big" type="button" id="passBtn">Pasar</button>';hint='No tienes jugada y no quedan fichas para robar.'}
       } else hint=G.mustSix&&!G.chain.length?`Sales tú: coloca el ${G.openD??6}|${G.openD??6}.`:'Tu turno: toca una ficha marcada.';
     } else if(!G.over&&G.phase==='pick'){
       hint=G.hands[me].length<PICK?`Coge tus fichas: llevas ${G.hands[me].length} de ${PICK}.`:'Esperando a que los demás cojan sus fichas…';
@@ -939,7 +972,8 @@ function renderGame(){
       :`<p>${w===me?'Te has quedado':`${label(w)} se ha quedado`} sin fichas.${pairWhy}</p>`;
     const big=w!=null&&r.pts?`<div class="bigpts${summed?' done':''}"><span class="bp">+${r.pts}</span><span class="bpl">punto${r.pts===1?'':'s'} para ${forWhom(w)}</span></div>`
       :'<div class="bigpts"><span class="bpl">Esta partidilla nadie suma puntos.</span></div>';
-    const tot=`<p class="tot">Fichas que quedan: <b>${r.total}</b> → <b>${r.pts}</b> punto${r.pts===1?'':'s'} <span>(cada 10 o fracción, 1)</span></p>`;
+    const parts=(r.pips||[]).filter(x=>x>0);
+    const tot=`<p class="tot">Se suman las fichas de todos: <b>${parts.length>1?parts.join(' + ')+' = ':''}${r.total}</b> → <b>${r.pts}</b> punto${r.pts===1?'':'s'} <span>(cada 10 o fracción, 1)</span></p>`;
     let btns='';
     if(!summed&&w!=null&&r.pts)btns=`<div class="actions"><button class="btn big sum" type="button" id="sumBtn">Sumar puntos</button></div>`;
     else if(o.type==='game')btns=`<div class="actions">${hostBtns?'<button class="btn" type="button" id="againBtn">Revancha</button>':''}<button class="btn alt" type="button" id="toMenuBtn">Menú</button></div>`;
@@ -1108,7 +1142,11 @@ function seatMap(){
 function oppHTML(w,side){
   const p=G.players[w],n=G.hands[w].length,reveal=!!G.over,nm=esc(p.name)+(p.cpu&&MODE==='online'?' · CPU':'');
   const tiles=reveal?G.hands[w].map(t=>tileHTML(t[0],t[1],'v','tiny')).join(''):'<i></i>'.repeat(n);
-  const step=side==='T'?Math.max(6,Math.min(22,280/Math.max(1,n))):Math.max(5,Math.min(19,190/Math.max(1,n)));
+  const small=matchMedia('(orientation: landscape) and (max-height: 540px)').matches,tw=small?24:30;
+  const tb=$('table'),tW=(tb&&tb.clientWidth)||360,tH=(tb&&tb.clientHeight)||260;
+  const portraitTop=side==='T'&&!matchMedia('(orientation: landscape)').matches;
+  const avail=side==='T'?(portraitTop?tW-24:tW-300):tH-120;
+  const step=Math.max(6,Math.min(tw+4,avail/Math.max(1,n)));
   const turn=G.turn===w&&!G.over&&G.phase!=='pick';
   const win=G.over&&sameTeam(G,G.over.winner,w);
   const mate=isPairs(G)&&sameTeam(G,w,me);
@@ -1184,14 +1222,28 @@ function renderPick(){
   $('pickMine').innerHTML=me>=0?G.hands[me].map(t=>tileHTML(t[0],t[1],'v','sm')).join('')+'<span class="slotph"></span>'.repeat(need):'';
   $('pickActs').innerHTML=MODE==='online'&&isHost()&&waiting.length&&!mixing?'<button class="btn alt" type="button" id="autofillBtn">Repartir las que faltan</button>':'';
 }
+let drawShow=null,drawSeen=null;
+function bigHalf(n){return `<span class="tile v bighalf">${half(n,'v')}</span>`}
 function renderDraw(){
-  const on=canDraw();
-  if(!on)drawHidden=true;
+  // ¿Acabo de robar yo? Guardar la ficha para enseñarla en grande
+  if(G.log&&G.log.k==='draw'&&G.log.w===me&&G.log.t&&drawSeen!==G.round+':'+G.seq){
+    drawSeen=G.round+':'+G.seq;
+    const t=G.log.t,valid=sidesFor(G,t).length>0;
+    drawShow={t,valid,until:performance.now()+(valid?1700:0)};
+    if(valid){clack(2);setTimeout(()=>{if(G)renderDraw()},1750)}
+  }
+  const linger=drawShow&&drawShow.valid&&performance.now()<drawShow.until;
+  const on=canDraw()||linger;
+  if(!canDraw()&&!linger){drawHidden=true;drawShow=null}
   const sheet=$('drawSheet');
   sheet.hidden=!on||drawHidden||!$('modal').hidden;
   if(sheet.hidden)return;
   $('drawCount').textContent=G.pool.length===1?'Queda 1 ficha':`Quedan ${G.pool.length} fichas`;
-  $('heap').innerHTML=heapButtons(G.pool,'data-pool',true,'Robar esta ficha');
+  const e=ends(G.chain),need=e?[...new Set([e.L,e.R])]:[];
+  $('needBox').innerHTML=`<span class="nlab">Te vale un</span><div class="nnums">${need.map(n=>`<span class="nn">${bigHalf(n)}<b>${n}</b></span>`).join('<i>o</i>')}</div>`;
+  $('heap').innerHTML=heapButtons(G.pool,'data-pool',canDraw(),'Robar esta ficha');
+  $('drawnBox').innerHTML=drawShow?`<span class="nlab">Has robado</span>${tileHTML(drawShow.t[0],drawShow.t[1],'v','bigt')}<span class="dverdict ${drawShow.valid?'ok':'no'}">${drawShow.valid?'¡Te vale! Juégala':'No vale: coge otra'}</span>`
+    :'<span class="nlab">Toca una ficha del montón</span><span class="dph"></span>';
 }
 /* "Sumar puntos": los puntos de la partidilla se ven antes de sumarse al marcador */
 let summedKey=null;
@@ -1371,6 +1423,8 @@ function renderBoard(){
   let minY=Infinity,maxY=-Infinity;
   ps.forEach(p=>{minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y+p.h)});
   const last=G.chain.length-1;
+  const rp=(G.plays||[]).slice().reverse().find(x=>x.w!==me);
+  const rivalIdx=rp?G.chain.findIndex(t=>''+t[0]+t[1]===rp.c||''+t[1]+t[0]===rp.c):-1;
   const choosing=sel!==null&&G.turn===me&&!G.over&&G.hands[me]&&G.hands[me][sel]&&sidesFor(G,G.hands[me][sel]).length===2;
   const newIdx=G.lastSide==='R'?last:0;
   const anim=G.seq!==animSeq&&G.log&&G.log.k==='play'&&G.lastSide;
@@ -1381,7 +1435,7 @@ function renderBoard(){
   el.innerHTML=`<svg viewBox="${vb}" role="img" aria-label="Mesa con ${G.chain.length} fichas">`+
     ps.map(p=>{
       const tL=choosing&&p.idx===0&&last>0,tR=choosing&&p.idx===last&&last>0;
-      return svgTile(p,`${p.idx===0||p.idx===last?'end':''} ${anim&&p.idx===newIdx?'new':''} ${tL||tR?'target':''}`,tL?'data-end="L" role="button" aria-label="Poner por este lado"':tR?'data-end="R" role="button" aria-label="Poner por este lado"':'');
+      return svgTile(p,`${p.idx===0||p.idx===last?'end':''} ${anim&&p.idx===newIdx?'new':''} ${tL||tR?'target':''} ${p.idx===rivalIdx?'rival':''}`,tL?'data-end="L" role="button" aria-label="Poner por este lado"':tR?'data-end="R" role="button" aria-label="Poner por este lado"':'');
     }).join('')+(choosing&&last===0?arrowsSvg(ps[0]):'')+'</svg>';
 }
 addEventListener('resize',()=>{if(G&&!$('scrGame').hidden)renderBoard()});
