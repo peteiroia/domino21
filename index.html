@@ -678,6 +678,37 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 #passBtn.cierre{font-size:24px;padding:18px 40px}
 @keyframes passblink{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(226,171,69,.9),0 6px 18px rgba(226,171,69,.45)}50%{transform:scale(1.07);box-shadow:0 0 0 10px rgba(226,171,69,0),0 6px 18px rgba(226,171,69,.45);filter:brightness(1.15)}}
 @media (orientation:landscape){#scrGame .actions #passBtn{font-size:18px;padding:12px 28px}#scrGame .actions #passBtn.cierre{font-size:20px;padding:13px 30px}}
+/* ¡Tu turno! más discreto */
+.yourturn{font-size:20px;padding:6px 20px}
+@media (orientation:landscape){#scrGame .yourturn{font-size:15px;padding:5px 14px}}
+/* Móvil en horizontal: todo más proporcionado y el campo más aprovechado */
+@media (orientation:landscape) and (max-height:540px){
+  .wrap.withside{padding-block:6px 4px!important}
+  #scrGame:not([hidden]){gap:4px!important}
+  #scrGame #hint{display:none}
+  #scrGame .hand-wrap{grid-template-columns:minmax(0,118px) minmax(0,1fr) auto;gap:6px}
+  #scrGame .hand-head .who{font-size:11px}
+  #scrGame .yourturn{font-size:12px;padding:4px 10px;border-radius:999px;justify-self:start}
+  #scrGame .yourturn.wait,#scrGame .yourturn.away{font-size:10px;padding:3px 8px;border-radius:10px;max-width:118px}
+  #scrGame .lg{--u:clamp(19px,6vh,30px)}
+  #scrGame .hand{padding:6px 2px 2px;gap:5px}
+  .opp{--tw:27px;--tl:48px}
+  .opill{font-size:11px;padding:2px 9px}.osc{font-size:12px}
+  .seatT{min-height:26px}
+  .table.pitch .tinfo{min-height:34px}
+  .table.pitch .tinfo .tlog{font-size:15px}
+  .table.pitch .tinfo > span:first-child{font-size:11px}
+  .drawctr{gap:6px!important;padding:4px 11px 4px 5px!important;font-size:13px!important}
+  .drawctr .dcb{width:17px!important;height:30px!important}
+  .drawctr .dcn{font-size:20px!important}
+  .table.pitch .tinfo{padding-right:150px!important}
+  .table.pitch > .sndbtn{width:32px;height:32px;top:6px;left:6px}.sndbtn svg{width:19px;height:19px}
+  .seatL{padding-top:36px!important}
+  #scrGame .actions .btn{padding:6px 12px;font-size:12px}
+  #scrGame .actions #passBtn{font-size:15px;padding:9px 20px}
+  #scrGame .actions #passBtn.cierre{font-size:16px;padding:10px 22px}
+  .micbtn{padding:5px 10px!important;font-size:11px!important}.micbtn .ball{width:18px;height:18px}
+}
 .micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:22;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .micbtn .mic{width:10px;height:15px;border-radius:5px;background:var(--brass);box-shadow:0 0 0 2px rgba(226,171,69,.35)}
 .micbtn.rec{background:#d93b3b;border-color:#ff9a9a}
@@ -1315,7 +1346,7 @@ function seatMap(){
 function oppHTML(w,side){
   const p=G.players[w],n=G.hands[w].length,reveal=!!G.over,nm=esc(p.name)+(p.cpu&&MODE==='online'?' · CPU':'');
   const tiles=reveal?G.hands[w].map(t=>tileHTML(t[0],t[1],'v','tiny')).join(''):'<i></i>'.repeat(n);
-  const small=matchMedia('(orientation: landscape) and (max-height: 540px)').matches,portrait=!matchMedia('(orientation: landscape)').matches,tw=small?36:(portrait&&side!=='T'?30:45);
+  const small=matchMedia('(orientation: landscape) and (max-height: 540px)').matches,portrait=!matchMedia('(orientation: landscape)').matches,tw=small?27:(portrait&&side!=='T'?30:45);
   const tb=$('table'),tW=(tb&&tb.clientWidth)||360,tH=(tb&&tb.clientHeight)||260;
   const portraitTop=side==='T'&&!matchMedia('(orientation: landscape)').matches;
   const avail=side==='T'?(portraitTop?tW-24:tW-300):tH-(small?255:185);
@@ -1647,7 +1678,7 @@ function renderBoard(){
   let fit=null;
   if(LANDSCAPE.matches&&el.clientHeight>40){
     // En horizontal: fichas de tamaño moderado al principio (máx. 1/6 del alto) que se van encogiendo para que quepa todo
-    const ch=el.clientHeight,maxU=Math.min(46,ch/6);let best=0;
+    const ch=el.clientHeight,maxU=Math.min(46,ch/(ch<260?4.6:6));let best=0;
     for(let w=8;w<=40;w++){
       const lp=layoutChain(G.chain,G.origin,w);let a=Infinity,b=-Infinity;
       lp.forEach(p=>{a=Math.min(a,p.y);b=Math.max(b,p.y+p.h)});
