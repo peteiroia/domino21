@@ -557,6 +557,12 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 .cpunames{display:grid;gap:6px}
 .cpunames .tag{margin-bottom:2px}
 #scrGame .seats,#scrGame .rules{display:none}
+.exitbtn{width:100%;margin-top:4px}
+.bye{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 50% 35%,#1d4fd6,#0b33b6 40%,#061a5e 85%)}
+.byecard{display:grid;justify-items:center;gap:12px;text-align:center;max-width:340px;color:#fff}
+.byecrest{width:130px;aspect-ratio:446/539;background:var(--wm) center/contain no-repeat;filter:drop-shadow(0 6px 20px rgba(0,0,0,.4))}
+.byecard h2{font-size:28px;color:var(--brass)}
+.byecard p{margin:0;color:#dfe7ff}
 .micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:18;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .micbtn .mic{width:10px;height:15px;border-radius:5px;background:var(--brass);box-shadow:0 0 0 2px rgba(226,171,69,.35)}
 .micbtn.rec{background:#d93b3b;border-color:#ff9a9a}
@@ -621,6 +627,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
       <div id="soloResume"></div>
       <button class="btn" type="button" id="soloBtn">Jugar</button>
     </div>
+    <button class="btn alt exitbtn" type="button" id="exitBtn">Salir de la aplicación</button>
   </section>
 
   <!-- SALA DE ESPERA -->
@@ -691,6 +698,9 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
       <div class="drawnbox" id="drawnBox"></div>
     </div>
   </div>
+</div>
+<div class="bye" id="bye" hidden>
+  <div class="byecard"><div class="byecrest" aria-hidden="true"></div><h2>¡Hasta pronto!</h2><p>Tus partidas quedan guardadas. Ya puedes cerrar la aplicación con el botón de inicio del móvil o deslizándola hacia arriba.</p><button class="btn" type="button" id="byeBack">Volver al juego</button></div>
 </div>
 <button class="micbtn" type="button" id="micBtn" hidden aria-label="Grabar un audio de hasta 10 segundos"></button>
 <div class="voicein" id="voiceIn" hidden></div>
@@ -1542,6 +1552,13 @@ function startSolo(){
   G=newGameState(players,'me');
   show('game');renderGame();maybeCpu();
 }
+/* Salir de la aplicación: el navegador solo deja cerrarla en algunos casos; si no, despedida con instrucciones */
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('#exitBtn,#byeBack');if(!b)return;
+  if(b.id==='byeBack'){$('bye').hidden=true;return}
+  try{window.close()}catch(x){}
+  setTimeout(()=>{if(!window.closed)$('bye').hidden=false},250);
+});
 /* Recuperar la última partida contra la máquina si sales sin querer (solo se guarda la última) */
 function saveSolo(){
   try{
