@@ -892,7 +892,7 @@ function deal(g){
   const set=[];for(let a=0;a<=6;a++)for(let b=a;b<=6;b++)set.push([a,b]);
   shuffle(set);
   g.pool=set; g.hands=g.players.map(()=>[]);
-  g.chain=[]; g.plays=[]; g.passes=0; g.round++; g.over=null; g.origin=0; g.lastSide=null; g.result=null;
+  g.chain=[]; g.plays=[]; g.sumDone=false; g.passes=0; g.round++; g.over=null; g.origin=0; g.lastSide=null; g.result=null;
   g.phase='pick'; g.turn=-1; g.mustSix=false; g.openD=null; g.dealN=(g.dealN||0)+1;
   g.log={k:'mix',r:g.round};
   g.seq=(g.seq||0)+1;
@@ -1138,7 +1138,7 @@ function renderGame(){
     let btns='';
     if(!summed&&w!=null&&r.pts)btns=`<div class="actions"><button class="btn big sum" type="button" id="sumBtn">Sumar puntos</button></div>`;
     else if(o.type==='game')btns=`<div class="actions">${hostBtns?'<button class="btn" type="button" id="againBtn">Revancha</button>':''}<button class="btn alt" type="button" id="toMenuBtn">Menú</button></div>`;
-    else if(hostBtns)btns=`<div class="actions"><button class="btn big" type="button" id="nextBtn">Siguiente partida</button></div>`;
+    else if(hostBtns||MODE==='online')btns=`<div class="actions"><button class="btn big" type="button" id="nextBtn">Siguiente partida</button></div>`;
     else btns=`<p class="muted" style="text-align:center">Esperando a que ${hostName} empiece la siguiente partida…</p>`;
     const final=o.type==='game'&&summed;
     $('card').classList.toggle('compact',!final);
@@ -1146,7 +1146,7 @@ function renderGame(){
     $('modal').hidden=false;
   } else $('modal').hidden=true;
 
-  renderOpps();watchDraws();renderDraw();renderPick();checkChamp();turnAlert();
+  renderOpps();watchDraws();renderDraw();renderPick();checkChamp();turnAlert();setTimeout(autoSum,0);
   if(G.last&&G.last.seq!==shownSeq){
     const fresh=shownSeq!==0||MODE==='solo';
     shownSeq=G.last.seq;
@@ -1408,10 +1408,10 @@ function renderDraw(){
 }
 /* "Sumar puntos": los puntos de la partida se ven antes de sumarse al marcador */
 let summedKey=null;
-const roundKey=()=>G?G.round+':'+G.seq:'';
+const roundKey=()=>G?G.round+':'+((G.history||[]).length):'';
 let overSeen=null,overAt=0;
 function overShowAt(g){
-  const k=g.round+':'+g.seq;
+  const k=g.round+':'+((g.history||[]).length);
   if(overSeen!==k){overSeen=k;overAt=performance.now()+1300;setTimeout(()=>{if(G&&G.over)renderGame()},1350)}
   return overAt;
 }
@@ -1431,10 +1431,12 @@ function shownScore(i){
   if(!G.over||isSummed())return G.score[i];
   const r=G.result;return G.score[i]-(r&&sameTeam(G,r.winner,i)?r.pts:0);
 }
-function sumPoints(){
-  if(!G||!G.over||isSummed())return;
-  const key=roundKey(),w=G.result.winner,from=shownScore(w),to=G.score[w];
-  $('sumBtn').disabled=true;$('sumBtn').textContent='Sumando…';
+let summing=null;
+function sumPoints(byMe=true){
+  if(!G||!G.over||isSummed()||summing===roundKey())return;
+  const key=roundKey(),w=G.result.winner,from=shownScore(w),to=G.score[w];summing=key;
+  if(byMe)sumAction();
+  const sb=$('sumBtn');if(sb){sb.disabled=true;sb.textContent='Sumando…'}
   document.querySelector('.bigpts')?.classList.add('fly');
   const ids=[w,mateOf(G,w)].filter(x=>x!=null);
   const els=()=>ids.flatMap(id=>[...document.querySelectorAll(`[data-score-row="${id}"],[data-score="${id}"]`)]);
@@ -1448,11 +1450,17 @@ function sumPoints(){
       summedKey=key;
       try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}
       renderGame();
-      if(G.over.type!=='game'&&isHost())setTimeout(()=>{if(G&&G.over&&roundKey()===key)goNext()},650);
+      if(G.over.type!=='game'&&byMe)setTimeout(()=>{if(G&&G.over&&roundKey()===key)goNext()},650);
     },500);
   };
   setTimeout(tick,350);
 }
+/* Basta con que un jugador pulse «Sumar puntos»: los demás ven la suma solos */
+function sumAction(){
+  if(typeof play==='function'&&typeof gameAction==='function'){if(MODE==='online')play({t:'sum'});else G.sumDone=true}
+  else act(g=>{if(!g.over||g.sumDone)return null;g.sumDone=true;g.seq++;return g},true);
+}
+function autoSum(){if(G&&G.over&&G.sumDone&&!isSummed()&&summing!==roundKey()&&performance.now()>=overAt)sumPoints(false)}
 function myLabel(){const n=G&&me>=0&&G.players[me]&&G.players[me].name;return n&&n!=='Jugador'?esc(n):'Tú'}
 /* Al acabar la partida: las fichas que les quedan a los demás, en grande encima del mensaje */
 function revealBig(){
@@ -1670,6 +1678,7 @@ function gameAction(g,who,a){
     case 'autofill':return autoFill(g);
     case 'cpu':if(g.over||g.phase==='pick'||!g.players[g.turn]?.cpu)return null;return cpuPlay(g);
     case 'next':if(!g.over||g.over.type==='game')return null;return deal(g);
+    case 'sum':if(!g.over||g.sumDone)return null;g.sumDone=true;g.seq++;return g;
     case 'again':if(!g.over||g.over.type!=='game')return null;g.score=g.players.map(()=>0);g.history=[];g.round=0;g.starter=null;return deal(g);
     case 'takeover':if(g.over||g.phase==='pick'||g.players[g.turn].cpu)return null;g.players[g.turn].cpu=true;g.seq++;return g;
     case 'reclaim':if(!g.players[who]||!g.players[who].cpu)return null;g.players[who].cpu=false;g.seq++;return g;
@@ -1942,8 +1951,8 @@ function docAction(d,from,a){
     }
     return null;
   }
-  if(d.status!=='playing'||(a.t!=='pick'&&a.t!=='cpupick'&&a.seq!==d.seq))return null;
-  const hostOnly=['next','again','takeover','cpu','autofill','cpupick'];
+  if(d.status!=='playing'||(a.t!=='pick'&&a.t!=='cpupick'&&a.t!=='sum'&&a.t!=='next'&&a.seq!==d.seq))return null;
+  const hostOnly=['again','takeover','cpu','autofill','cpupick'];
   const g=dec(d),who=g.players.findIndex(p=>p.id===from);
   if(hostOnly.includes(a.t)?!host:who<0)return null;
   const r=gameAction(g,who,a);return r?enc(r):null;
