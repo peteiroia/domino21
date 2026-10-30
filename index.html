@@ -617,7 +617,6 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
           <button type="button" data-n="3" aria-pressed="false">3</button>
         </div>
       </div>
-      <div class="cpunames" id="cpuNames"></div>
       <button class="btn" type="button" id="soloBtn">Jugar</button>
     </div>
   </section>
@@ -1105,7 +1104,7 @@ function startMix(){
 
 /* ---------- Celebración del campeón ---------- */
 const FEM=new Set('carmen isabel raquel pilar mar ines belen rocio consuelo dolores mercedes lourdes nieves beatriz ruth rut noemi rosario montserrat montse sol luz paz abril itziar iratxe uxue maite esther ester miriam judith ingrid astrid sigrid iris zoe chloe irene margot nuria noelia aurora encarnacion asuncion concepcion begona soledad trinidad maribel yolanda elisabet isabel lis flor amparo leonor almudena reyes rosaura carmela nahia arantxa alicia jasmin yasmin ines noor inmaculada inma jone ane nerea maider leire uxia antia iciar ione ainhoa vivian karen evelyn lilian ruth guadalupe mabel arwen elen alejandrina'.split(' '));
-const MASC_A=new Set('borja luca josema joshua josua nicola mustafa elias isaias jeremias matias tobias ezequias andrea_m garcia sasha misha kosta jonatan'.split(' '));
+const MASC_A=new Set('quagliata adama altimira zakaria borja luca josema joshua josua nicola mustafa elias isaias jeremias matias tobias ezequias andrea_m garcia sasha misha kosta jonatan'.split(' '));
 function isFemaleName(n){
   const w=String(n||'').trim().split(/\s+/)[0].normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
   if(!w)return false;
@@ -1534,24 +1533,13 @@ function startSolo(){
   leaveNet();
   MODE='solo';me=0;sel=null;shownSeq=0;
   const players=[{id:'me',name:myName()}];
-  saveCpuNames();
-  for(let k=1;k<=soloN;k++)players.push({id:'cpu'+k,name:cpuName(k),cpu:true});
+  for(let k=1;k<=soloN;k++)players.push({id:'cpu'+k,name:randomCpuName(players.map(p=>p.name)),cpu:true});
   G=newGameState(players,'me');
   show('game');renderGame();maybeCpu();
 }
-/* Nombres para los rivales de la máquina */
-function cpuDefault(k){return soloN===1?'CPU':'CPU '+k}
-function cpuName(k){const el=$('cpuName'+k);const v=(el&&el.value||'').replace(/[<>]/g,'').trim().slice(0,14);return v||cpuDefault(k)}
-function saveCpuNames(){try{const a=[1,2,3].map(k=>($('cpuName'+k)||{}).value||'');localStorage.setItem('d21cpu',JSON.stringify(a))}catch(e){}}
-function renderCpuNames(){
-  let saved=[];try{saved=JSON.parse(localStorage.getItem('d21cpu')||'[]')}catch(e){}
-  const cur=[1,2,3].map(k=>($('cpuName'+k)||{}).value);
-  $('cpuNames').innerHTML=`<div class="tag">Nombre de ${soloN===1?'tu rival':'tus rivales'}</div>`+Array.from({length:soloN},(_,i)=>{const k=i+1,v=cur[i]??saved[i]??'';
-    return `<input type="text" id="cpuName${k}" maxlength="14" placeholder="${cpuDefault(k)}" value="${esc(v)}" aria-label="Nombre del rival ${k}">`}).join('');
-}
-document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#soloSeg [data-n]'))setTimeout(renderCpuNames,0)});
-document.addEventListener('change',e=>{if(e.target.id&&e.target.id.startsWith('cpuName'))saveCpuNames()});
-setTimeout(renderCpuNames,0);
+/* Los rivales de la máquina llevan nombres de jugadores del Dépor, al azar y sin repetir */
+const CPU_NAMES=['Aubameyang','Villares','Noubi','David Mella','Yeremay','Loureiro','Angeliño','Zakaria','Antonio Hidalgo','Adama','Quagliata','Mario Soriano','Amatucci','Nsongo Bil','Giménez','Altimira','Ximo','Leo Román','Riki','Luismi Cruz','Asp Jensen','Bright Ede','Ferllo','Germán Parreño','Arnau Comas','Dani Barcia','Marc Casadó','Noé'];
+function randomCpuName(used=[]){const free=CPU_NAMES.filter(n=>!used.includes(n));return free.length?free[rnd(free.length)]:'CPU'}
 
 /* ---------- Online sin cuentas: conexión directa entre navegadores (PeerJS / WebRTC) ----------
    El móvil que crea la partida hace de mesa: guarda el estado, valida las jugadas y lo reparte. */
@@ -1623,7 +1611,7 @@ function docAction(d,from,a){
         d.players.push({id:from,name:cleanName(a.name)});return maybeStart(d);
       }
       case 'leave':if(host){d.status='closed';return d}if(!d.players.some(p=>p.id===from))return null;d.players=d.players.filter(p=>p.id!==from);return d;
-      case 'addCpu':{if(!host||d.players.length>=need)return null;const k=d.players.filter(p=>p.cpu).length+1;d.players.push({id:'cpu'+Date.now(),name:'CPU '+k,cpu:true});return maybeStart(d)}
+      case 'addCpu':{if(!host||d.players.length>=need)return null;d.players.push({id:'cpu'+Date.now(),name:randomCpuName(d.players.map(p=>p.name)),cpu:true});return maybeStart(d)}
       case 'rmCpu':if(!host||!d.players[a.i]||!d.players[a.i].cpu)return null;d.players.splice(a.i,1);return d;
       case 'start':if(!host||d.players.length<2)return null;return startFrom(d);
     }
