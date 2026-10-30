@@ -1612,12 +1612,72 @@ function renderOnlineBox(){
     <div class="tag">¿Cuántos vais a jugar?</div>
     <div class="seg" id="needSeg">${[2,3,4].map(n=>`<button type="button" data-need="${n}" aria-pressed="${n===needN}">${n}</button>`).join('')}</div>
     <button class="btn big" type="button" id="createBtn">Crear partida de ${needN}</button>
+    ${gamesHTML()}
     <div class="sub"><span class="muted">¿Te han pasado un código?</span><input type="text" id="codeIn" class="code-in" maxlength="4" placeholder="CÓDIGO" autocomplete="off"><button class="btn alt" type="button" id="joinBtn">Unirse</button></div>
     ${installHTML()}
-    <p class="muted">Sin cuentas ni apps: basta con abrir el enlace. El móvil que crea la partida hace de mesa, así que debe tenerla abierta mientras jugáis.</p>
+    <p class="muted">Sin cuentas ni apps: tus amigos verán tu partida aquí o entrarán con el enlace. El móvil que crea la partida hace de mesa, así que debe tenerla abierta mientras jugáis.</p>
   </div>`;
   if(keep)$('codeIn').value=keep;
 }
+function gamesHTML(){
+  const now=Date.now();
+  const list=Object.values(lob.games||{}).filter(g=>g&&g.code&&g.n<g.need&&now-(g.ts||0)<90000&&!(lob.mine&&lob.mine.code===g.code)).sort((a,b)=>b.ts-a.ts);
+  const st=lob.role?'' :'<span class="muted" style="font-size:12px"> · buscando…</span>';
+  return `<div class="tag"><span class="livedot"></span>Partidas disponibles (${list.length})${st}</div>`+
+    (list.length?`<div class="open-list">${list.map(g=>`<div class="avail"><div class="info"><b>Partida de ${esc(g.host)}</b><span>${g.n} de ${g.need} jugadores${g.need===4?' · por parejas':''}</span></div><button class="btn" type="button" data-code="${esc(g.code)}">Unirse</button></div>`).join('')}</div>`
+      :'<p class="muted" style="margin:0">Todavía no hay partidas esperando. Crea una y aparecerá aquí para los demás.</p>');
+}
+/* ---------- Tablón de partidas sin servidor: el primer móvil que abre el juego hace de tablón; si se va, otro toma el relevo ---------- */
+const lob={peer:null,role:null,conn:null,conns:new Set(),games:{},mine:null,timer:null};
+function lobbyRender(){if(!$('scrMenu').hidden&&document.activeElement?.id!=='codeIn')renderOnlineBox()}
+function lobbyRetry(ms){clearTimeout(lob.timer);lob.timer=setTimeout(lobbyStart,ms)}
+function lobbyReset(){try{lob.peer&&lob.peer.destroy()}catch(e){}lob.peer=null;lob.role=null;lob.conn=null;lob.conns=new Set()}
+function lobbyStart(){
+  if(!peerReady()||lob.peer)return;
+  const p=lob.peer=new Peer(PREFIX+'lobby');
+  p.on('open',()=>{if(lob.peer!==p)return;lob.role='reg';lob.games={};if(lob.mine)lob.games[lob.mine.code]={...lob.mine,ts:Date.now(),owner:'self'};lobbyRender()});
+  p.on('connection',c=>{
+    lob.conns.add(c);
+    c.on('data',m=>regMsg(c,m));
+    const drop=()=>{lob.conns.delete(c);let ch=false;for(const k in lob.games)if(lob.games[k].owner===c){delete lob.games[k];ch=true}if(ch)regBroadcast()};
+    c.on('close',drop);c.on('error',drop);
+  });
+  p.on('error',e=>{
+    if(lob.peer!==p)return;
+    if(e.type==='unavailable-id'){lobbyReset();lobbyJoin();return}
+    lobbyReset();lobbyRetry(4000+Math.random()*4000);
+  });
+  p.on('disconnected',()=>{if(lob.peer===p&&!p.destroyed)setTimeout(()=>{try{p.reconnect()}catch(x){}},1500)});
+}
+function lobbyJoin(){
+  const p=lob.peer=new Peer();
+  p.on('open',()=>{
+    if(lob.peer!==p)return;
+    const c=p.connect(PREFIX+'lobby',{reliable:true});
+    c.on('open',()=>{if(lob.peer!==p)return;lob.role='cli';lob.conn=c;c.send({t:'list'});if(lob.mine)c.send({t:'reg',g:lob.mine})});
+    c.on('data',m=>{if(m&&m.t==='games'&&m.games&&typeof m.games==='object'){lob.games=m.games;lobbyRender()}});
+    c.on('close',()=>{if(lob.peer!==p)return;lobbyReset();lobbyRetry(800+Math.random()*2500)});
+  });
+  p.on('error',e=>{if(lob.peer!==p)return;lobbyReset();lobbyRetry(e.type==='peer-unavailable'?300+Math.random()*1500:4000)});
+}
+function regPublic(){const o={};for(const k in lob.games){const g=lob.games[k];o[k]={code:g.code,host:g.host,n:g.n,need:g.need,ts:g.ts}}return o}
+function regBroadcast(){const msg={t:'games',games:regPublic()};for(const c of lob.conns){try{c.open&&c.send(msg)}catch(e){}}lobbyRender()}
+function regMsg(c,m){
+  if(!m||typeof m!=='object')return;
+  if(m.t==='list'){try{c.send({t:'games',games:regPublic()})}catch(e){}return}
+  if(m.t==='reg'&&m.g&&/^[A-Z]{4}$/.test(m.g.code)){lob.games[m.g.code]={code:m.g.code,host:String(m.g.host||'?').slice(0,14),n:+m.g.n||1,need:+m.g.need||2,ts:Date.now(),owner:c};regBroadcast();return}
+  if(m.t==='unreg'&&m.code&&lob.games[m.code]&&lob.games[m.code].owner===c){delete lob.games[m.code];regBroadcast()}
+}
+setInterval(()=>{if(lob.role==='reg'){const now=Date.now();let ch=false;for(const k in lob.games){const g=lob.games[k];if(g.owner==='self')g.ts=now;else if(now-g.ts>75000){delete lob.games[k];ch=true}}if(ch)regBroadcast()}},15000);
+/* La partida que yo he creado se anuncia mientras espera jugadores */
+function lobbySync(){
+  const d=netRole==='host'&&hostDoc;
+  const want=d&&d.status==='lobby'&&d.players.length<(d.need||4)?{code:d.code,host:(d.players.find(p=>p.id===d.host)||{}).name||'Anfitrión',n:d.players.length,need:d.need||4}:null;
+  const prev=lob.mine;lob.mine=want;
+  if(lob.role==='reg'){if(prev&&(!want||prev.code!==want.code))delete lob.games[prev.code];if(want)lob.games[want.code]={...want,ts:Date.now(),owner:'self'};regBroadcast()}
+  else if(lob.role==='cli'&&lob.conn&&lob.conn.open){try{if(want)lob.conn.send({t:'reg',g:want});else if(prev)lob.conn.send({t:'unreg',code:prev.code})}catch(e){}}
+}
+setInterval(()=>{if(lob.mine&&lob.role==='cli'&&lob.conn&&lob.conn.open)try{lob.conn.send({t:'reg',g:lob.mine})}catch(e){}},25000);
 let installEvt=null;
 const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -1670,7 +1730,7 @@ function docAction(d,from,a){
 }
 
 /* ----- Anfitrión ----- */
-function saveHost(){store('d21host',JSON.stringify({code,doc:hostDoc}));store('d21last',code);store('d21role','host')}
+function saveHost(){store('d21host',JSON.stringify({code,doc:hostDoc}));store('d21last',code);store('d21role','host');lobbySync()}
 function hostOpen(c,doc,fresh){
   leaveNet(true);
   netRole='host';MODE='online';code=c;hostDoc=doc;hostConns=new Map();openTries=0;
@@ -1839,6 +1899,7 @@ function leaveTableAndMenu(){
 }
 
 function leaveNet(keepMode){
+  if(lob.mine){const r=netRole;netRole=null;lobbySync();netRole=r}
   clearTimeout(cpuTimer);clearTimeout(retryT);
   const p=peer;peer=null;guestConn=null;hostConns=new Map();
   if(p)setTimeout(()=>{try{p.destroy()}catch(e){}},300);
@@ -1989,6 +2050,7 @@ show('menu');renderOnlineBox();
 function boot(){
   renderOnlineBox();
   if(!peerReady())return;
+  lobbyStart();
   const last=load('d21last'),role=load('d21role');
   if(last&&(!inviteCode||inviteCode===last)){
     if(role==='host'&&savedHost(last)){hostOpen(last,savedHost(last),false);return}
