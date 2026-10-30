@@ -273,7 +273,7 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
 .hist li{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:5px 0}
 .hist b{color:var(--ink)}
 .hist .g{color:var(--brass);font-weight:800;white-space:nowrap}
-@media (min-width:1180px){.drawer-tab{display:none}.drawer{transform:none;box-shadow:none;width:300px}.scrim{display:none}.wrap.withside{margin-right:max(316px,calc((100% - 820px)/2))}}
+@media (min-width:1400px){.drawer-tab{display:none}.drawer{transform:none;box-shadow:none;width:300px}.scrim{display:none}.wrap.withside{margin-right:max(316px,calc((100% - 820px)/2))}}
 .modal{overflow-y:auto}
 .card{max-height:100%;overflow-y:auto;box-sizing:border-box}
 
@@ -289,31 +289,6 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
   .how{max-height:40vh;overflow-y:auto}
   #scrMenu{overflow-y:auto}
   #scrLobby{overflow-y:auto}
-  #scrGame:not([hidden]){display:grid!important;grid-template-columns:minmax(150px,24%) 1fr;grid-template-rows:minmax(0,1fr) auto;gap:6px 10px!important;height:100%;min-height:0}
-  #scrGame .rules{display:none}
-  #scrGame .seats{grid-column:1;grid-row:1;grid-template-columns:1fr;align-content:start;gap:5px;overflow-y:auto;min-height:0}
-  #scrGame .seat{padding:5px 8px;gap:2px;border-radius:8px}
-  #scrGame .seat .track{display:none}
-  #scrGame .seat .who{font-size:11px}
-  #scrGame .pts{font-size:18px}
-  #scrGame .pts small{font-size:10px}
-  #scrGame .back{width:9px;height:15px;border-radius:2px}
-  #scrGame .cnt{font-size:11px}
-  #scrGame .pb{width:15px;height:26px}
-  #scrGame .table{grid-column:2;grid-row:1;min-height:0;padding:4px 8px 6px;gap:2px;grid-template-rows:auto minmax(0,1fr);border-radius:12px}
-  #scrGame .tinfo{font-size:11px}
-  #scrGame .board{min-height:0;height:100%}
-  #scrGame .board svg{width:100%;height:100%}
-  #scrGame .log{grid-column:1;grid-row:2;min-height:0;font-size:12px;text-align:left;align-self:center;line-height:1.3}
-  #scrGame .hand-wrap{grid-column:2;grid-row:2;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto;gap:2px 8px;align-items:center}
-  #scrGame .hand-head{grid-column:1/-1;flex-wrap:nowrap}
-  #scrGame .hand-head .who{font-size:11px}
-  #scrGame #hint{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #scrGame .hand{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;gap:6px;padding:8px 2px 2px}
-  #scrGame .lg{--u:27px}
-  #scrGame .ht.sel{transform:translateY(-6px)}
-  #scrGame .actions{flex-direction:column;gap:5px;flex-wrap:nowrap}
-  #scrGame .actions .btn{padding:7px 12px;font-size:12px;white-space:nowrap}
   .drawer-tab{font-size:10px;padding:10px 5px;padding-right:calc(5px + env(safe-area-inset-right,0px))}
   .card{padding:14px 18px;gap:8px}
   .card h2{font-size:20px}
@@ -345,6 +320,7 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
     radial-gradient(circle,var(--cal) 0 3px,transparent 3.5px) 50% 50%/10px 10px no-repeat}
 .pitch::after{content:"";position:absolute;left:50%;top:50%;height:30%;aspect-ratio:1;transform:translate(-50%,-50%);border:2px solid var(--cal);border-radius:50%;pointer-events:none;z-index:0}
 .table.pitch > *{position:relative;z-index:1}
+.table.pitch > .drawctr{position:absolute;z-index:3}
 .table.pitch .tinfo{color:rgba(255,255,255,.9);text-shadow:0 1px 2px rgba(0,0,0,.5)}
 .table.pitch .board .empty{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
 .table.pitch .board .ts{fill:rgba(0,0,0,.42)}
@@ -377,6 +353,48 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
 .btn.sum{font-size:18px;padding:14px 28px;box-shadow:0 0 0 3px rgba(226,171,69,.3),0 0 22px rgba(226,171,69,.6);animation:glowb 1s ease-in-out infinite alternate}
 @keyframes glowb{to{box-shadow:0 0 0 6px rgba(226,171,69,.15),0 0 30px rgba(226,171,69,.9)}}
 .rank .big.pop{animation:pop .5s ease}
+.drawctr{position:absolute;top:10px;left:10px;z-index:3;display:flex;align-items:center;gap:6px;padding:4px 10px 4px 5px;border:0;border-radius:999px;cursor:pointer;
+  background:rgba(6,26,94,.78);color:#fff;font:800 12px var(--body);box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.drawctr .dcb{width:14px;height:24px;border-radius:2.5px;background:#0b33b6 var(--crest) center/cover;box-shadow:inset 0 0 0 1px rgba(255,255,255,.65),2px -2px 0 -0.5px #0b33b6,2px -2px 0 .5px rgba(255,255,255,.5)}
+.drawctr .dcn{font-family:var(--display);font-size:17px;color:var(--brass);font-variant-numeric:tabular-nums}
+.drawctr.empty{opacity:.55}
+.drawctr.live{background:var(--brass);color:var(--felt-edge);animation:blinkctr .8s ease-in-out infinite}
+.drawctr.live .dcn{color:var(--felt-edge)}
+@keyframes blinkctr{0%,100%{box-shadow:0 0 0 0 rgba(226,171,69,.9),0 2px 6px rgba(0,0,0,.35);filter:brightness(1)}50%{box-shadow:0 0 0 8px rgba(226,171,69,0),0 2px 6px rgba(0,0,0,.35);filter:brightness(1.25)}}
+.drawctr:focus-visible{outline:2px solid var(--hot);outline-offset:2px}
+.table.pitch .tinfo{padding-left:118px;justify-content:flex-end;min-height:32px;align-items:center}
+.tlog{display:none}
+.osc{font-family:var(--display);font-size:14px;color:#fff}
+.osc small{font-family:var(--body);font-size:10px;opacity:.7}
+
+/* En horizontal (móvil o tablet): todo para el campo. Rivales arriba, tu mano abajo */
+@media (orientation:landscape){
+  html,body{height:100%}
+  .wrap.withside{height:100%;box-sizing:border-box;max-width:none;padding-block:6px;gap:0;grid-template-rows:minmax(0,1fr);
+    padding-right:max(40px,calc(env(safe-area-inset-right,0px) + 32px))}
+  .wrap.withside > header{position:fixed;top:calc(6px + env(safe-area-inset-top,0px));right:max(44px,calc(env(safe-area-inset-right,0px) + 38px));z-index:16}
+  .wrap.withside > header .brand{display:none}
+  .wrap.withside > header .ghost{padding:3px 9px;font-size:11px;background:rgba(0,0,0,.4)}
+  .wrap.withside .how{position:fixed;top:44px;right:50px;max-width:440px;max-height:70vh;overflow:auto;z-index:17;background:var(--felt-deep)}
+  .wrap.withside .netmsg{position:fixed;top:40px;left:50%;transform:translateX(-50%);z-index:17}
+  #scrGame:not([hidden]){display:grid!important;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;gap:5px!important;height:100%;min-height:0}
+  #scrGame .seats,#scrGame .rules,#scrGame .log{display:none}
+  #scrGame .opps{justify-content:flex-start;padding-right:230px;min-height:30px}
+  #scrGame .table{min-height:0;padding:4px 6px;gap:0;grid-template-rows:auto minmax(0,1fr);border-radius:12px}
+  #scrGame .table.pitch .tinfo{font-size:11px;min-height:28px}
+  #scrGame .tlog{display:inline;flex:1;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #scrGame .board{min-height:0;height:100%}
+  #scrGame .board svg{width:100%;height:100%}
+  #scrGame .hand-wrap{display:grid;grid-template-columns:minmax(110px,auto) minmax(0,1fr) auto;align-items:center;gap:8px}
+  #scrGame .hand-head{display:grid;gap:2px;justify-content:start}
+  #scrGame .hand-head .who{font-size:12px}
+  #scrGame #hint{font-size:11px;max-width:16em;line-height:1.25}
+  #scrGame .hand{flex-wrap:nowrap;overflow-x:auto;justify-content:center;gap:6px;padding:9px 2px 2px}
+  #scrGame .lg{--u:clamp(24px,7.2vh,40px)}
+  #scrGame .ht.sel{transform:translateY(-7px)}
+  #scrGame .actions{flex-direction:column;gap:5px;flex-wrap:nowrap}
+  #scrGame .actions .btn{padding:7px 12px;font-size:12px;white-space:nowrap}
+}
 </style>
 </head>
 <body>
@@ -439,8 +457,9 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
   <section id="scrGame" style="display:grid;gap:14px" hidden>
     <section class="seats" id="seats"></section>
     <div class="rules"><span class="lbl">Puntos al ganar la ronda:</span><span class="chip"><b>10</b> = 1</span><span class="chip"><b>11</b> = 2</span><span class="chip"><b>20</b> = 2</span><span class="chip"><b>21</b> = 3</span></div>
+    <div class="opps" id="opps"></div>
     <section class="table pitch" id="table">
-      <div class="opps" id="opps"></div>
+      <button class="drawctr" type="button" id="drawCtr" data-openpool="1" aria-label="Fichas para robar"><span class="dcb"></span><span class="dcn" id="drawNum">0</span><span class="dcl">¡A robar!</span></button>
       <div class="tinfo" id="tinfo"></div>
       <div class="board" id="board"></div>
     </section>
@@ -705,7 +724,7 @@ function renderGame(){
     const sw=shownScore(w);let cells='';for(let k=1;k<=GOAL;k++)cells+=`<i class="${sw>=k?'on':''}"></i>`;
     const nm=w===me?'Tú':esc(p.name)+(p.cpu&&MODE==='online'?' · CPU':'');
     const n=G.hands[w].length;
-    const tiles=w===me?poolHTML()
+    const tiles=w===me?''
       :`<span class="cnt">${n} ficha${n===1?'':'s'} en la mano</span>`;
     return `<div class="seat ${G.turn===w&&!G.over?'turn':''}">
       <div class="seat-top"><span class="who">${nm}</span>
@@ -714,7 +733,11 @@ function renderGame(){
   }).join('');
 
   $('rankBody').innerHTML=rankingHTML(false)+historyHTML();
-  $('tinfo').innerHTML=`<span>Ronda ${G.round}${MODE==='online'?` · Mesa ${esc(code)}`:''}</span><span>¡A robar!: ${G.pool.length}</span>`;
+  $('tinfo').innerHTML=`<span class="tlog">${logText()}</span><span>Ronda ${G.round}${MODE==='online'?` · Mesa ${esc(code)}`:''}</span>`;
+  const dc=$('drawCtr'),live=canDraw();
+  dc.hidden=G.phase==='pick';$('drawNum').textContent=G.pool.length;
+  dc.classList.toggle('live',live);dc.classList.toggle('empty',!G.pool.length);
+  dc.setAttribute('aria-label',`¡A robar!: quedan ${G.pool.length} fichas${live?'. No tienes jugada: pulsa para robar':''}`);
   renderBoard();
   $('log').innerHTML=logText();
 
@@ -723,7 +746,7 @@ function renderGame(){
     $('handTitle').textContent='Observando';
     $('hand').innerHTML='<p class="muted">Esta partida ya empezó. Puedes mirarla en directo.</p>';
   } else {
-    $('handTitle').textContent='Tu mano';
+    $('handTitle').textContent=`Tu mano · ${shownScore(me)}/${GOAL}`;
     const myTurn=G.turn===me&&!G.over&&!G.players[me].cpu;
     const playable=G.hands[me].map(t=>sidesFor(G,t).length>0);
     $('hand').innerHTML=G.hands[me].map((t,i)=>{
@@ -739,7 +762,7 @@ function renderGame(){
         act=`<button class="btn" type="button" data-side="L">← Izquierda (al ${L})</button><button class="btn" type="button" data-side="R">Derecha (al ${R}) →</button>`;
         hint='Esa ficha cabe en los dos lados. Elige uno.';
       } else if(!playable.some(Boolean)){
-        if(G.pool.length)hint='No tienes jugada: ¡a robar! Elige una ficha.';
+        if(G.pool.length)hint='No tienes jugada: pulsa «¡A robar!», arriba a la izquierda del campo.';
         else{act='<button class="btn alt" type="button" id="passBtn">Pasar</button>';hint='No tienes jugada y no quedan fichas para robar.'}
       } else hint=G.mustSix&&!G.chain.length?`Sales tú: coloca el ${G.openD??6}|${G.openD??6}.`:'Tu turno: toca una ficha marcada.';
     } else if(!G.over&&G.phase==='pick'){
@@ -790,7 +813,7 @@ function poolHTML(){
     `<button type="button" class="pb" data-openpool="1" ${on?'':'disabled'} aria-label="Abrir las fichas para robar"></button>`).join('')}</div></div>`;
 }
 /* Ventana para robar: fichas boca abajo desordenadas y giradas, cada una con su sitio fijo durante la ronda */
-let drawHidden=false;
+let drawHidden=true;
 function seeded(n){let x=(n*2654435761)>>>0;return()=>{x^=x<<13;x>>>=0;x^=x>>17;x^=x<<5;x>>>=0;return x/4294967296}}
 /* Posición de cada ficha boca abajo en el tapete (unidades: ancho 100, alto 80).
    Se calcula una vez por reparto para las 28 fichas, sin que ninguna pise a otra, y no cambia al coger o robar. */
@@ -922,7 +945,7 @@ function renderOpps(){
   $('opps').innerHTML=G.players.map((p,w)=>{
     if(w===me)return '';
     const n=G.hands[w].length,nm=esc(p.name)+(p.cpu&&MODE==='online'?' · CPU':'');
-    return `<div class="opp ${G.turn===w&&!G.over&&G.phase!=='pick'?'turn':''}" aria-label="${nm}: ${n} fichas"><span class="onm">${nm}</span><span class="ofan">${'<i></i>'.repeat(n)}</span><span class="oc">${n}</span></div>`;
+    return `<div class="opp ${G.turn===w&&!G.over&&G.phase!=='pick'?'turn':''}" aria-label="${nm}: ${n} fichas"><span class="onm">${nm}</span><span class="osc">${shownScore(w)}<small>/${GOAL}</small></span><span class="ofan">${'<i></i>'.repeat(n)}</span><span class="oc">${n}</span></div>`;
   }).join('');
 }
 /* Cuando roba un rival se abre la ventana de robar y se ve cómo elige cada ficha */
@@ -985,7 +1008,7 @@ function renderPick(){
 }
 function renderDraw(){
   const on=canDraw();
-  if(!on)drawHidden=false;
+  if(!on)drawHidden=true;
   const sheet=$('drawSheet');
   sheet.hidden=!on||drawHidden||!$('modal').hidden;
   if(sheet.hidden)return;
@@ -1076,7 +1099,7 @@ function pop(w){
 
 /* ---------- Mesa en serpiente: cada brazo crece desde la primera ficha y gira al llegar al borde ---------- */
 let animSeq=0;
-const LANDSCAPE=matchMedia('(orientation: landscape) and (max-height: 540px)');
+const LANDSCAPE=matchMedia('(orientation: landscape)');
 try{LANDSCAPE.addEventListener('change',()=>{if(G&&!$('scrGame').hidden)requestAnimationFrame(renderBoard)})}catch(e){}
 function layoutChain(chain,origin,W){
   const out=[];
@@ -1140,7 +1163,7 @@ function renderBoard(){
     for(let w=8;w<=34;w++){
       const lp=layoutChain(G.chain,G.origin,w);let a=Infinity,b=-Infinity;
       lp.forEach(p=>{a=Math.min(a,p.y);b=Math.max(b,p.y+p.h)});
-      const sc=Math.min(cw/(w+.8),ch/(b-a+.8),46);
+      const sc=Math.min(cw/(w+.8),ch/(b-a+.8),64);
       if(sc>best+.01){best=sc;W=w}
     }
   }
