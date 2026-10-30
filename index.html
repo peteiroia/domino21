@@ -7,13 +7,16 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Dominó 21">
+<meta name="apple-mobile-web-app-title" content="Dominó Dépor">
 <meta name="description" content="Dominó a 21 puntos: juega online con tus amigos o contra la máquina, sin cuentas.">
-<meta property="og:title" content="Dominó del 21">
+<meta property="og:title" content="Dominó del Dépor">
 <meta property="og:description" content="Te han invitado a una partida de dominó. Entra con el enlace, sin cuentas ni apps.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect width='34' height='34' rx='7' fill='%2314332a'/%3E%3Crect x='10' y='3' width='14' height='28' rx='3' fill='%23f4eddc'/%3E%3Cline x1='12' y1='17' x2='22' y2='17' stroke='%23cbbf9f'/%3E%3Ccircle cx='14' cy='8' r='1.6' fill='%230b33b6'/%3E%3Ccircle cx='20' cy='12' r='1.6' fill='%230b33b6'/%3E%3Ccircle cx='14' cy='22' r='1.6' fill='%23e2ab45'/%3E%3Ccircle cx='20' cy='22' r='1.6' fill='%23e2ab45'/%3E%3Ccircle cx='14' cy='27' r='1.6' fill='%23e2ab45'/%3E%3Ccircle cx='20' cy='27' r='1.6' fill='%23e2ab45'/%3E%3C/svg%3E">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
-<title>Dominó del 21</title>
+<title>Dominó del Dépor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Figtree:wght@400;600;800&display=swap">
 <style>
@@ -162,6 +165,37 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
 .dhead h2{font-size:26px;color:var(--brass)}
 .heap{position:relative;width:min(100%,calc((100dvh - 150px) * 10 / 7));aspect-ratio:10/7;margin:0 auto;border-radius:12px;
   background:radial-gradient(120% 90% at 50% 40%,var(--felt) 0%,var(--felt-deep) 85%);box-shadow:inset 0 0 0 1px var(--line),inset 0 6px 20px rgba(0,0,0,.35)}
+.champ{position:fixed;inset:0;z-index:60;display:grid;place-items:center;overflow:hidden;cursor:pointer;
+  background:radial-gradient(ellipse at 50% 35%,#1d4fd6 0%,#0b33b6 35%,#061a5e 80%);
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.champ canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+.champ .rays{position:absolute;inset:-60%;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.10) 0 9deg,transparent 9deg 18deg);animation:spin 26s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ccard{position:relative;z-index:3;display:grid;justify-items:center;gap:6px;text-align:center;color:#fff;max-width:100%}
+.cup{width:clamp(90px,26vmin,170px);height:auto;filter:drop-shadow(0 0 24px rgba(226,171,69,.8));animation:cupIn 1s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes cupIn{from{transform:scale(0) rotate(-200deg)}to{transform:none}}
+.ctitle{font-family:var(--display);font-size:clamp(38px,12vw,84px);line-height:.95;color:#e2ab45;text-shadow:0 4px 0 #061a5e,0 0 26px rgba(226,171,69,.7);animation:slam .7s cubic-bezier(.2,1.6,.4,1) .35s both}
+.cname{font-family:var(--display);font-size:clamp(28px,9vw,60px);line-height:1;color:#fff;text-shadow:0 3px 0 #061a5e;overflow-wrap:anywhere;animation:slam .7s cubic-bezier(.2,1.6,.4,1) .7s both}
+.csub{font:700 16px var(--body);opacity:.92;animation:rise .5s ease 1.1s both}
+.ccard .btn{margin-top:10px;background:#fff;color:#0b33b6;animation:rise .5s ease 1.4s both}
+@keyframes slam{from{transform:scale(3);opacity:0}to{transform:none;opacity:1}}
+@media (orientation:landscape) and (max-height:540px){.cup{width:80px}.ctitle{font-size:44px}.cname{font-size:30px}}
+.dcard.wide{width:min(680px,100%)}
+.pickcount{font-family:var(--display);font-size:22px;color:var(--ivory);font-variant-numeric:tabular-nums}
+.heap.big{width:min(100%,calc((100dvh - 230px) * 10 / 7))}
+.heap.big .hb{width:8%}
+.heap.mix{pointer-events:none}
+.heap.mix .hb{animation:swirl 2s cubic-bezier(.3,.7,.3,1) var(--d) both}
+@keyframes swirl{
+  0%{transform:translate(calc(-50% + var(--sx)),calc(-50% + var(--sy))) rotate(0deg) scale(.9)}
+  35%{transform:translate(calc(-50% + var(--mx)),calc(-50% + var(--my))) rotate(calc(var(--a) + 540deg))}
+  70%{transform:translate(calc(-50% + var(--sx) * .3),calc(-50% + var(--sy) * .3)) rotate(calc(var(--a) - 200deg))}
+  100%{transform:translate(-50%,-50%) rotate(var(--a))}}
+.hb.taken{opacity:0;transform:translate(-50%,-50%) rotate(var(--a)) scale(1.4);transition:all .2s}
+.hb:disabled{cursor:default}
+.mine{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;min-height:52px;align-items:center}
+.mine .slotph{width:24px;height:50px;border-radius:5px;border:1.5px dashed var(--line)}
+@media (orientation:landscape) and (max-height:540px){.heap.big{width:min(100%,calc((100dvh - 150px) * 10 / 7))}.mine{min-height:0}.mine .tile.sm{--u:16px}.mine .slotph{width:16px;height:34px}}
 .hb{position:absolute;width:9.5%;aspect-ratio:9/16;padding:0;border:0;border-radius:10%/6%;cursor:pointer;
   background:#0b33b6 var(--crest) center/cover;transform:translate(-50%,-50%) rotate(var(--a));
   box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.6),2px 3px 5px rgba(0,0,0,.45);transition:transform .15s ease,box-shadow .15s ease}
@@ -295,6 +329,7 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
 }
 @media (max-width:420px){.sm{--u:21px}.lg{--u:32px}.pts{font-size:24px}.bigcode strong{font-size:36px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.drawsheet{z-index:19}
 </style>
 </head>
 <body>
@@ -304,7 +339,7 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
   <header>
     <div class="brand">
       <svg viewBox="0 0 34 34" aria-hidden="true"><g transform="rotate(-18 17 17)"><rect x="9" y="2" width="16" height="30" rx="3.5" fill="#f4eddc" stroke="#cbbf9f"/><line x1="12" y1="17" x2="22" y2="17" stroke="#cbbf9f" stroke-width="1.2"/><circle cx="13.5" cy="7" r="1.7" fill="#0b33b6"/><circle cx="17" cy="9.8" r="1.7" fill="#0b33b6"/><circle cx="20.5" cy="12.6" r="1.7" fill="#0b33b6"/><circle cx="13.5" cy="22" r="1.7" fill="#e2ab45"/><circle cx="20.5" cy="22" r="1.7" fill="#e2ab45"/><circle cx="13.5" cy="27.5" r="1.7" fill="#e2ab45"/><circle cx="20.5" cy="27.5" r="1.7" fill="#e2ab45"/></g></svg>
-      <h1>Dominó del <span>21</span></h1>
+      <h1>Dominó del <span>Dépor</span></h1>
     </div>
     <div class="hbtns">
       <button class="ghost" id="bellBtn" type="button" hidden aria-pressed="true">Avisos: sí</button>
@@ -314,7 +349,7 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
   </header>
   <div class="netmsg" id="netMsg" role="status" hidden></div>
   <div class="how" id="how" hidden>
-    <p>Las fichas se reparten al azar. En la primera jugada de cada partida sale obligatoriamente quien tenga el <b>6|6</b>; si nadie lo tiene, el doble más alto (5|5, 4|4…). Eso solo decide quién sale en la primera ronda: después la salida pasa por turno al siguiente jugador, en el sentido de las agujas del reloj, y puede salir con cualquier ficha.</p>
+    <p>Al empezar cada ronda se revuelven las 28 fichas boca abajo y cada jugador coge las 7 que quiera. En la primera jugada de cada partida sale obligatoriamente quien tenga el <b>6|6</b>; si nadie lo tiene, el doble más alto (5|5, 4|4…). Eso solo decide quién sale en la primera ronda: después la salida pasa por turno al siguiente jugador, en el sentido de las agujas del reloj, y puede salir con cualquier ficha.</p>
     <p>Coloca fichas que encajen en un extremo. Si no puedes, <b>¡a robar!</b>: eliges una de las fichas que quedan boca abajo. Si no queda ninguna, pasas.</p>
     <p>La ronda la gana quien se queda sin fichas. Si la mesa se <b>cierra</b> (nadie puede jugar), gana quien tenga <b>menos puntos</b> en sus fichas.</p>
     <p>El ganador suma los puntos de las fichas de <b>todos los jugadores</b> y cada 10 o fracción es un punto: <b>10</b> = 1 · <b>11</b> = 2 · <b>20</b> = 2 · <b>21</b> = 3. Quien llegue primero a <b>21 puntos</b> gana la partida.</p>
@@ -368,6 +403,34 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
       <div class="actions" id="actions"></div>
     </section>
   </section>
+</div>
+<div class="champ" id="champ" hidden>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div class="rays" aria-hidden="true"></div>
+  <div class="ccard" role="dialog" aria-modal="true" aria-labelledby="champTitle">
+    <svg class="cup" viewBox="0 0 120 120" aria-hidden="true">
+      <path d="M38 18h44v22c0 16-10 28-22 28S38 56 38 40z" fill="#e2ab45" stroke="#a8761f" stroke-width="2.5"/>
+      <path d="M38 24H24c0 14 6 22 16 24M82 24h14c0 14-6 22-16 24" fill="none" stroke="#e2ab45" stroke-width="6" stroke-linecap="round"/>
+      <path d="M52 18h8v50h-8z" fill="#f6d27a" opacity=".55"/>
+      <rect x="54" y="68" width="12" height="16" fill="#c9922f"/>
+      <path d="M40 98c0-8 9-14 20-14s20 6 20 14z" fill="#e2ab45" stroke="#a8761f" stroke-width="2.5"/>
+      <rect x="36" y="98" width="48" height="10" rx="2" fill="#0b33b6"/>
+      <path d="M60 30l3.5 7.2 7.9 1.1-5.7 5.6 1.3 7.9L60 48l-7 3.8 1.3-7.9-5.7-5.6 7.9-1.1z" fill="#fff"/>
+    </svg>
+    <div class="ctitle" id="champTitle"></div>
+    <div class="cname" id="champName"></div>
+    <div class="csub" id="champSub"></div>
+    <button class="btn big" type="button" id="champClose">Ver la clasificación</button>
+  </div>
+</div>
+<div class="drawsheet" id="pickSheet" hidden>
+  <div class="dcard wide" role="dialog" aria-modal="true" aria-labelledby="pickTitle">
+    <div class="dhead"><h2 id="pickTitle">Coge tus 7 fichas</h2><span class="pickcount" id="pickCount"></span></div>
+    <p class="muted" id="pickTxt" style="margin:0"></p>
+    <div class="heap big" id="pickHeap"></div>
+    <div class="mine" id="pickMine"></div>
+    <div class="actions" id="pickActs"></div>
+  </div>
 </div>
 <div class="drawsheet" id="drawSheet" hidden>
   <div class="dcard" role="dialog" aria-modal="true" aria-labelledby="drawTitle">
@@ -427,28 +490,48 @@ function sumOf(chain){
 const pipCount=h=>h.reduce((n,t)=>n+t[0]+t[1],0);
 const nextOf=(g,i)=>(i+1)%g.players.length;
 
+const PICK=7;
 function deal(g){
-  const first=g.starter==null;
-  const hasD=(h,d)=>h.some(t=>t[0]===d&&t[1]===d);
-  const topDouble=()=>{for(let d=6;d>=0;d--){const i=g.hands.findIndex(h=>hasD(h,d));if(i>=0)return{d,i}}return null};
-  let set,open=null;
-  do{
-    set=[];for(let a=0;a<=6;a++)for(let b=a;b<=6;b++)set.push([a,b]);
-    shuffle(set);
-    g.hands=g.players.map(()=>set.splice(0,7));
-    open=first?topDouble():null;
-  }while(first&&!open);
-  g.pool=set; g.chain=[]; g.mustSix=first; g.openD=first?open.d:null; g.passes=0; g.round++; g.over=null; g.origin=0; g.lastSide=null; g.result=null;
-  if(g.starter==null){
-    g.starter=open.i; g.log={k:'start',w:open.i,t:[open.d,open.d]};
-  } else g.log={k:'round',w:g.starter,r:g.round};
-  g.turn=g.starter; g.seq=(g.seq||0)+1;
+  // Se revuelven las 28 fichas boca abajo; cada jugador coge 7 (la CPU coge las suyas al momento)
+  const set=[];for(let a=0;a<=6;a++)for(let b=a;b<=6;b++)set.push([a,b]);
+  shuffle(set);
+  g.pool=set; g.hands=g.players.map(p=>p.cpu?set.splice(0,PICK):[]);
+  g.chain=[]; g.passes=0; g.round++; g.over=null; g.origin=0; g.lastSide=null; g.result=null;
+  g.phase='pick'; g.turn=-1; g.mustSix=false; g.openD=null; g.dealN=(g.dealN||0)+1;
+  g.log={k:'mix',r:g.round};
+  g.seq=(g.seq||0)+1;
+  if(g.hands.every(h=>h.length>=PICK))finishPick(g);
   return g;
+}
+function finishPick(g){
+  const first=g.starter==null;
+  if(first){
+    const hasD=(h,d)=>h.some(t=>t[0]===d&&t[1]===d);
+    let open=null;
+    for(let d=6;d>=0&&!open;d--){const i=g.hands.findIndex(h=>hasD(h,d));if(i>=0)open={d,i}}
+    if(!open){g.round--;deal(g);g.log={k:'redeal'};return g}
+    g.starter=open.i;g.mustSix=true;g.openD=open.d;g.log={k:'start',w:open.i,t:[open.d,open.d]};
+  } else g.log={k:'round',w:g.starter,r:g.round};
+  g.phase='play';g.turn=g.starter;g.seq++;
+  return g;
+}
+function pickTile(g,who,v){
+  if(g.phase!=='pick'||who<0||!g.hands[who]||g.hands[who].length>=PICK)return null;
+  const i=g.pool.findIndex(t=>''+t[0]+t[1]===v);if(i<0)return null;
+  g.hands[who].push(g.pool.splice(i,1)[0]);g.seq++;
+  if(g.hands.every(h=>h.length>=PICK))finishPick(g);
+  return g;
+}
+function autoFill(g){
+  if(g.phase!=='pick')return null;
+  g.hands.forEach(h=>{while(h.length<PICK)h.push(g.pool.splice(rnd(g.pool.length),1)[0])});
+  g.seq++;finishPick(g);return g;
 }
 function newGameState(players,host){
   return deal({players,host,score:players.map(()=>0),history:[],round:0,starter:null,seq:0,last:null,status:'playing'});
 }
 function sidesFor(g,t){
+  if(g.phase==='pick')return [];
   if(g.mustSix&&!g.chain.length){const d=g.openD??6;return t[0]===d&&t[1]===d?['R']:[]}
   return fits(t,g.chain);
 }
@@ -550,6 +633,8 @@ const isHost=()=>MODE==='solo'||(G&&G.host===myId);
 function logText(){
   const L=G.log;if(!L)return'';
   const w=L.w;
+  if(L.k==='mix')return `Ronda ${L.r}: se revuelven las fichas. Coged 7 cada uno.`;
+  if(L.k==='redeal')return 'Nadie tiene ningún doble: se vuelven a revolver las fichas.';
   if(L.k==='start')return L.t[0]===6?`${label(w)} ${vb(w,'tienes','tiene')} el 6|6 y ${vb(w,'sales','sale')} con él.`:`Nadie tiene el 6|6. ${label(w)} ${vb(w,'tienes','tiene')} el doble más alto (${tStr(L.t)}) y ${vb(w,'sales','sale')} con él.`;
   if(L.k==='round')return `Ronda ${L.r}. ${label(w)} ${vb(w,'sales','sale')}.`;
   if(L.k==='draw')return `${label(w)} ${vb(w,'robaste','robó')} ${w===me?'el '+tStr(L.t):'una ficha'}.`;
@@ -600,11 +685,13 @@ function renderGame(){
         if(G.pool.length)hint='No tienes jugada: ¡a robar! Elige una ficha.';
         else{act='<button class="btn alt" type="button" id="passBtn">Pasar</button>';hint='No tienes jugada y no quedan fichas para robar.'}
       } else hint=G.mustSix&&!G.chain.length?`Sales tú: coloca el ${G.openD??6}|${G.openD??6}.`:'Tu turno: toca una ficha marcada.';
+    } else if(!G.over&&G.phase==='pick'){
+      hint=G.hands[me].length<PICK?`Coge tus fichas: llevas ${G.hands[me].length} de ${PICK}.`:'Esperando a que los demás cojan sus fichas…';
     } else if(!G.over){
       hint=`Turno de ${label(G.turn)}…`;
     }
   }
-  if(MODE==='online'&&isHost()&&!G.over&&G.turn!==me&&!G.players[G.turn].cpu){
+  if(MODE==='online'&&isHost()&&!G.over&&G.phase!=='pick'&&G.turn!==me&&!G.players[G.turn].cpu){
     act+=`<button class="btn alt" type="button" id="takeoverBtn">¿${esc(G.players[G.turn].name)} no está? Que juegue la CPU</button>`;
   }
   $('actions').innerHTML=act;$('hint').textContent=hint;
@@ -628,7 +715,7 @@ function renderGame(){
     $('modal').hidden=false;
   } else $('modal').hidden=true;
 
-  renderDraw();
+  renderDraw();renderPick();checkChamp();
   if(G.last&&G.last.seq!==shownSeq){
     const fresh=shownSeq!==0||MODE==='solo';
     shownSeq=G.last.seq;
@@ -639,6 +726,7 @@ function renderGame(){
 function canDraw(){return G&&!G.over&&me>=0&&G.turn===me&&!G.players[me].cpu&&G.pool.length>0&&!G.hands[me].some(t=>sidesFor(G,t).length)}
 function poolHTML(){
   const n=G.pool.length,on=canDraw();
+  if(G.phase==='pick')return `<span class="cnt">Cogiendo fichas · ${G.hands[me]?.length||0} de ${PICK}</span>`;
   if(!n)return '<span class="cnt">No quedan fichas para robar</span>';
   return `<div class="pool${on?' live':''}"><span class="cnt">¡A robar! · ${n}</span><div class="pbs">${G.pool.map(()=>
     `<button type="button" class="pb" data-openpool="1" ${on?'':'disabled'} aria-label="Abrir las fichas para robar"></button>`).join('')}</div></div>`;
@@ -646,17 +734,91 @@ function poolHTML(){
 /* Ventana para robar: fichas boca abajo desordenadas y giradas, cada una con su sitio fijo durante la ronda */
 let drawHidden=false;
 function seeded(n){let x=(n*2654435761)>>>0;return()=>{x^=x<<13;x>>>=0;x^=x>>17;x^=x<<5;x>>>=0;return x/4294967296}}
-function heapLayout(){
-  const ps=G.pool.map((t,k)=>{const r=seeded(G.round*977+t[0]*31+t[1]*7+13);r();r();
-    return {k,x:10+r()*80,y:12+r()*76,a:Math.floor(r()*360)}});
+function heapLayout(tiles=G.pool,salt=0,minD=14){
+  const ps=tiles.map((t,k)=>{const r=seeded(G.round*977+salt*7919+t[0]*31+t[1]*7+13);r();r();
+    return {k,x:10+r()*80,y:12+r()*76,a:Math.floor(r()*360),m1:r(),m2:r()}});
   for(let it=0;it<40;it++){
     for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){
       const A=ps[i],B=ps[j];let dx=B.x-A.x,dy=(B.y-A.y)*.7,d=Math.hypot(dx,dy);
-      if(d<14){if(d<.01){dx=1;dy=0;d=1}const f=(14-d)/2/d;A.x-=dx*f;B.x+=dx*f;A.y-=dy*f/.7;B.y+=dy*f/.7}
+      if(d<minD){if(d<.01){dx=1;dy=0;d=1}const f=(minD-d)/2/d;A.x-=dx*f;B.x+=dx*f;A.y-=dy*f/.7;B.y+=dy*f/.7}
     }
     ps.forEach(p=>{p.x=Math.min(91,Math.max(9,p.x));p.y=Math.min(88,Math.max(12,p.y))});
   }
   return ps;
+}
+/* ---------- Celebración del campeón ---------- */
+const FEM=new Set('carmen isabel raquel pilar mar ines belen rocio consuelo dolores mercedes lourdes nieves beatriz ruth rut noemi rosario montserrat montse sol luz paz abril itziar iratxe uxue maite esther ester miriam judith ingrid astrid sigrid iris zoe chloe irene margot nuria noelia aurora encarnacion asuncion concepcion begona soledad trinidad maribel yolanda elisabet isabel lis flor amparo leonor almudena reyes rosaura carmela nahia arantxa alicia jasmin yasmin ines noor inmaculada inma jone ane nerea maider leire uxia antia iciar ione ainhoa vivian karen evelyn lilian ruth guadalupe mabel arwen elen alejandrina'.split(' '));
+const MASC_A=new Set('borja luca josema joshua josua nicola mustafa elias isaias jeremias matias tobias ezequias andrea_m garcia sasha misha kosta jonatan'.split(' '));
+function isFemaleName(n){
+  const w=String(n||'').trim().split(/\s+/)[0].normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+  if(!w)return false;
+  if(/^cpu/.test(w))return true; // la CPU
+  if(FEM.has(w))return true;
+  if(MASC_A.has(w))return false;
+  return /a$/.test(w);
+}
+let champKey=null,confT=null,celebrating=false;
+function fanfare(){try{if(!actx)return;const t=actx.currentTime;[[523,0,.18],[659,.18,.18],[784,.36,.18],[1047,.54,.5],[784,.98,.16],[1047,1.14,.7]].forEach(([f,d,l])=>{const o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.0001,t+d);g.gain.exponentialRampToValueAtTime(.25,t+d+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d+l);o.connect(g).connect(actx.destination);o.start(t+d);o.stop(t+d+l+.05)})}catch(e){}}
+function showChamp(w){
+  const p=G.players[w],fem=isFemaleName(p.name),meWon=w===me;
+  $('champTitle').textContent=fem?'¡CAMPEONA!':'¡CAMPEÓN!';
+  $('champName').textContent=meWon?(fem?'¡Eres la campeona!':'¡Eres el campeón!'):(p.name||'Jugador');
+  $('champSub').textContent=`${meWon?(myName()||'Tú'):p.name} gana con ${G.score[w]} puntos en ${G.round} ronda${G.round===1?'':'s'}.`;
+  if(meWon)$('champName').textContent=(p.name&&p.name!=='Jugador'?p.name:'Tú');
+  $('champ').hidden=false;celebrating=true;
+  try{navigator.vibrate&&navigator.vibrate([120,60,120,60,300])}catch(e){}
+  fanfare();confetti();
+}
+function hideChamp(){$('champ').hidden=true;celebrating=false;cancelAnimationFrame(confT)}
+function confetti(){
+  const cv=$('confetti'),ctx=cv.getContext('2d');
+  const W=cv.width=innerWidth*devicePixelRatio,H=cv.height=innerHeight*devicePixelRatio;
+  const cols=['#ffffff','#e2ab45','#5aa0ff','#0b33b6','#f6d27a'];
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const N=reduce?0:160,ps=[];
+  for(let i=0;i<N;i++)ps.push({x:Math.random()*W,y:-Math.random()*H*.8,vx:(Math.random()-.5)*3*devicePixelRatio,vy:(2+Math.random()*3)*devicePixelRatio,s:(5+Math.random()*7)*devicePixelRatio,r:Math.random()*6,vr:(Math.random()-.5)*.3,c:cols[i%cols.length]});
+  const t0=performance.now();
+  cancelAnimationFrame(confT);
+  const step=t=>{
+    ctx.clearRect(0,0,W,H);
+    ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;if(p.y>H&&t-t0<6000){p.y=-20;p.x=Math.random()*W}
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/4,p.s,p.s/2);ctx.restore()});
+    if(t-t0<9000&&celebrating)confT=requestAnimationFrame(step);else ctx.clearRect(0,0,W,H);
+  };
+  confT=requestAnimationFrame(step);
+}
+function checkChamp(){
+  if(G&&G.over&&G.over.type==='game'&&G.over.winner!=null){
+    const key=(code||'solo')+':'+G.seq+':'+G.over.winner;
+    if(key!==champKey){champKey=key;showChamp(G.over.winner)}
+  } else if(celebrating)hideChamp();
+}
+let mixKey=null,mixT=null;
+function renderPick(){
+  const sheet=$('pickSheet');
+  const on=G&&G.phase==='pick'&&!G.over;
+  sheet.hidden=!on;
+  if(!on)return;
+  const mine=me>=0?G.hands[me].length:PICK, need=Math.max(0,PICK-mine);
+  const key=G.round+':'+G.dealN;
+  const mixing=key!==mixKey||mixT!==null;
+  if(key!==mixKey){mixKey=key;clearTimeout(mixT);mixT=setTimeout(()=>{mixT=null;if(G&&G.phase==='pick')renderPick()},2300)}
+  $('pickCount').textContent=me>=0?`${mine} de ${PICK}`:'';
+  const waiting=G.players.map((p,i)=>i!==me&&G.hands[i].length<PICK?`${esc(p.name)} (${G.hands[i].length}/${PICK})`:null).filter(Boolean);
+  $('pickTxt').innerHTML=mixing?'Revolviendo las fichas…':
+    me<0?'Los jugadores están cogiendo sus fichas.':
+    need?`Toca ${need===PICK?'7 fichas':need===1?'1 ficha más':need+' fichas más'} para formar tu mano.`:
+    `¡Ya tienes tus 7! Esperando a ${waiting.join(', ')||'los demás'}…`;
+  const can=!mixing&&me>=0&&need>0;
+  const ps=heapLayout(G.pool,G.dealN,G.pool.length>16?10.5:14);
+  const heap=$('pickHeap');
+  heap.classList.toggle('mix',mixing);
+  heap.innerHTML=ps.map(p=>{
+    const sx=((50-p.x)/8*100).toFixed(0),sy=((50-p.y)/8*100*.7).toFixed(0);
+    const mx=((p.m1-.5)*500).toFixed(0),my=((p.m2-.5)*300).toFixed(0);
+    return `<button type="button" class="hb" data-pick="${''+G.pool[p.k][0]+G.pool[p.k][1]}" ${can?'':'disabled'} style="left:${p.x.toFixed(1)}%;top:${p.y.toFixed(1)}%;--a:${p.a}deg;--sx:${sx}%;--sy:${sy}%;--mx:${mx}%;--my:${my}%;--d:${(p.m1*.35).toFixed(2)}s" aria-label="Coger esta ficha"></button>`}).join('');
+  $('pickMine').innerHTML=me>=0?G.hands[me].map(t=>tileHTML(t[0],t[1],'v','sm')).join('')+'<span class="slotph"></span>'.repeat(need):'';
+  $('pickActs').innerHTML=MODE==='online'&&isHost()&&waiting.length&&!mixing?'<button class="btn alt" type="button" id="autofillBtn">Repartir las que faltan</button>':'';
 }
 function renderDraw(){
   const on=canDraw();
@@ -772,6 +934,7 @@ function svgTile(p,cls){
 }
 function renderBoard(){
   const el=$('board');
+  if(G.phase==='pick'){el.innerHTML='<p class="empty">Se han revuelto las fichas. Cada jugador coge 7.</p>';return}
   if(!G.chain.length){
     el.innerHTML=`<p class="empty">La mesa está vacía. ${G.mustSix?(G.turn===me?`Sales tú con el ${G.openD??6}|${G.openD??6}.`:`${label(G.turn)} sale con el ${G.openD??6}|${G.openD??6}…`):(G.turn===me?'Toca cualquier ficha para salir.':`Sale ${label(G.turn)}…`)}</p>`;
     return;
@@ -808,10 +971,12 @@ function gameAction(g,who,a){
     case 'move':{if(g.over||g.turn!==who)return null;const t=g.hands[who][a.i];if(!t||!sidesFor(g,t).includes(a.side))return null;return applyMove(g,who,a.i,a.side)}
     case 'draw':if(g.over||g.turn!==who||!g.pool.length||blocked())return null;return applyDraw(g,who,a.k);
     case 'pass':if(g.over||g.turn!==who||g.pool.length||blocked())return null;return applyPass(g,who);
-    case 'cpu':if(g.over||!g.players[g.turn].cpu)return null;return cpuPlay(g);
+    case 'pick':return pickTile(g,who,a.v);
+    case 'autofill':return autoFill(g);
+    case 'cpu':if(g.over||g.phase==='pick'||!g.players[g.turn]?.cpu)return null;return cpuPlay(g);
     case 'next':if(!g.over||g.over.type==='game')return null;return deal(g);
     case 'again':if(!g.over||g.over.type!=='game')return null;g.score=g.players.map(()=>0);g.history=[];g.round=0;g.starter=null;return deal(g);
-    case 'takeover':if(g.over||g.players[g.turn].cpu)return null;g.players[g.turn].cpu=true;g.seq++;return g;
+    case 'takeover':if(g.over||g.phase==='pick'||g.players[g.turn].cpu)return null;g.players[g.turn].cpu=true;g.seq++;return g;
     case 'reclaim':if(!g.players[who]||!g.players[who].cpu)return null;g.players[who].cpu=false;g.seq++;return g;
   }
   return null;
@@ -824,7 +989,7 @@ function play(a){
 }
 function maybeCpu(){
   clearTimeout(cpuTimer);
-  if(!G||G.over||!G.players[G.turn].cpu||!isHost())return;
+  if(!G||G.over||G.phase==='pick'||!G.players[G.turn]?.cpu||!isHost())return;
   const seq=G.seq;
   cpuTimer=setTimeout(()=>{if(G&&G.seq===seq)play({t:'cpu'})},900);
 }
@@ -852,7 +1017,7 @@ let needN=2, inviteCode=null, resumeCode=null;
 let peer=null, netRole=null, hostDoc=null, hostConns=new Map(), guestConn=null, retryT=null, everConnected=false, openTries=0;
 const baseURL=()=>location.href.split('#')[0];
 const shareLink=c=>baseURL()+'#'+c;
-const waLink=c=>'https://wa.me/?text='+encodeURIComponent(`¿Echamos un dominó del 21? Entra en mi partida (código ${c}): ${shareLink(c)}`);
+const waLink=c=>'https://wa.me/?text='+encodeURIComponent(`¿Echamos un Dominó del Dépor? Entra en mi partida (código ${c}): ${shareLink(c)}`);
 const cleanName=n=>String(n||'Jugador').replace(/[<>]/g,'').trim().slice(0,14)||'Jugador';
 function netStatus(m){const el=$('netMsg');el.textContent=m||'';el.hidden=!m}
 function peerReady(){return typeof window.Peer==='function'}
@@ -872,10 +1037,23 @@ function renderOnlineBox(){
     <div class="seg" id="needSeg">${[2,3,4].map(n=>`<button type="button" data-need="${n}" aria-pressed="${n===needN}">${n}</button>`).join('')}</div>
     <button class="btn big" type="button" id="createBtn">Crear partida de ${needN}</button>
     <div class="sub"><span class="muted">¿Te han pasado un código?</span><input type="text" id="codeIn" class="code-in" maxlength="4" placeholder="CÓDIGO" autocomplete="off"><button class="btn alt" type="button" id="joinBtn">Unirse</button></div>
+    ${installHTML()}
     <p class="muted">Sin cuentas ni apps: basta con abrir el enlace. El móvil que crea la partida hace de mesa, así que debe tenerla abierta mientras jugáis.</p>
   </div>`;
   if(keep)$('codeIn').value=keep;
 }
+let installEvt=null;
+const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+function installHTML(){
+  if(standalone()||location.protocol==='file:')return '';
+  if(installEvt)return '<button class="btn alt big" type="button" id="installBtn">Instalar la app en este móvil</button>';
+  if(isIOS)return '<p class="muted">Para tenerlo como app en el iPhone: abre esta página en Safari, toca Compartir y luego «Añadir a pantalla de inicio».</p>';
+  return '<p class="muted">Para tenerlo como app: en el menú ⋮ de Chrome toca «Instalar aplicación» o «Añadir a pantalla de inicio».</p>';
+}
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;if(!$('scrMenu').hidden)renderOnlineBox()});
+addEventListener('appinstalled',()=>{installEvt=null;renderOnlineBox()});
+if('serviceWorker' in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 function setTab(t){
   document.querySelectorAll('.tabs [data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));
   $('paneOnline').hidden=t!=='online';$('paneSolo').hidden=t!=='solo';
@@ -908,8 +1086,8 @@ function docAction(d,from,a){
     }
     return null;
   }
-  if(d.status!=='playing'||a.seq!==d.seq)return null;
-  const hostOnly=['next','again','takeover','cpu'];
+  if(d.status!=='playing'||(a.t!=='pick'&&a.seq!==d.seq))return null;
+  const hostOnly=['next','again','takeover','cpu','autofill'];
   const g=dec(d),who=g.players.findIndex(p=>p.id===from);
   if(hostOnly.includes(a.t)?!host:who<0)return null;
   const r=gameAction(g,who,a);return r?enc(r):null;
@@ -1110,7 +1288,7 @@ function turnAlert(){
   if(lastAlertSeq===key)return;
   const first=lastAlertSeq===null;lastAlertSeq=key;
   if(!alertsOn||first&&!document.hidden&&G.chain.length)return;
-  try{if('Notification' in window&&Notification.permission==='granted'&&document.hidden)new Notification('Dominó del 21 · ¡Te toca!',{body:'Es tu turno en la mesa '+code+'.',tag:'d21-turn'})}catch(e){}
+  try{if('Notification' in window&&Notification.permission==='granted'&&document.hidden)new Notification('Dominó del Dépor · ¡Te toca!',{body:'Es tu turno en la mesa '+code+'.',tag:'d21-turn'})}catch(e){}
   try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
   ding();
   const t=$('turnflash');t.hidden=false;t.classList.remove('go');void t.offsetWidth;t.classList.add('go');setTimeout(()=>{t.hidden=true},2600);
@@ -1126,6 +1304,8 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
   if(b.classList.contains('ht')){tapTile(+b.dataset.i);return}
   if(b.dataset.side&&sel!==null){play({t:'move',i:sel,side:b.dataset.side});return}
+  if(b.id==='champClose'){hideChamp();return}
+  if(b.dataset.pick){if(G&&G.phase==='pick'&&me>=0&&G.hands[me].length<PICK){b.disabled=true;b.classList.add('taken');play({t:'pick',v:b.dataset.pick})}return}
   if(b.id==='hideDraw'){drawHidden=true;renderDraw();return}
   if(b.dataset.openpool){drawHidden=false;renderDraw();return}
   if(b.dataset.pool!=null){if(canDraw())play({t:'draw',k:+b.dataset.pool});return}
@@ -1146,6 +1326,7 @@ document.addEventListener('click',e=>{
     case 'againBtn':play({t:'again'});break;
     case 'takeoverBtn':play({t:'takeover'});break;
     case 'reclaimBtn':play({t:'reclaim'});break;
+    case 'autofillBtn':play({t:'autofill'});break;
     case 'toMenuBtn':case 'menuBtn':case 'leaveBtn':leaveTableAndMenu();break;
     case 'addCpuBtn':netAction({t:'addCpu'});break;
     case 'startBtn':netAction({t:'start'});break;
@@ -1155,9 +1336,11 @@ document.addEventListener('click',e=>{
       if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>{b.textContent='Enlace copiado'},fb);else fb();
       break;}
     case 'bellBtn':toggleBell();break;
+    case 'installBtn':if(installEvt){installEvt.prompt();installEvt.userChoice.finally(()=>{installEvt=null;renderOnlineBox()})}break;
   }
 });
 $('scrim').addEventListener('click',()=>setDrawer(false));
+$('champ').addEventListener('click',e=>{if(!e.target.closest('button'))hideChamp()});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='codeIn')joinTable(e.target.value)});
 $('nameIn').addEventListener('change',()=>store('d21name',$('nameIn').value.trim()));
 
