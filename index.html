@@ -822,6 +822,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 <div class="bye" id="bye" hidden>
   <div class="byecard"><div class="byecrest" aria-hidden="true"></div><h2>¡Hasta pronto!</h2><p>Tus partidas quedan guardadas. Ya puedes cerrar la aplicación con el botón de inicio del móvil o deslizándola hacia arriba.</p><button class="btn" type="button" id="byeBack">Volver al juego</button></div>
 </div>
+<div class="modal" id="resumeAsk" hidden><div class="card compact" role="dialog" aria-labelledby="raT"><h2 id="raT">¿Quieres continuar la última partida?</h2><p id="raTxt"></p><div class="actions"><button class="btn big" type="button" id="raYes">Continuar</button><button class="btn alt" type="button" id="raNo">Nueva partida</button></div></div></div>
 <div class="chattype" id="chatType" hidden><input type="text" id="chatInput" maxlength="200" placeholder="Escribe un mensaje" aria-label="Mensaje"><button class="btn" type="button" id="chatSend">Enviar</button><button class="btn alt" type="button" id="chatCancel">Cancelar</button></div>
 <button class="micbtn" type="button" id="micBtn" hidden aria-label="Enviar un mensaje de voz que se transcribe"></button>
 <div class="voicein" id="voiceIn" hidden></div>
@@ -838,6 +839,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
   <div class="drawer-foot">
     <button class="btn alt" type="button" id="drawerRulesBtn">Reglas</button>
     <button class="btn alt" type="button" id="drawerBell" hidden>Avisos: sí</button>
+    <button class="btn" type="button" id="drawerSave">Guardar partida</button>
     <button class="btn alt" type="button" id="drawerMenu">Salir al menú</button>
   </div>
 </aside>
@@ -1719,6 +1721,19 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#sndBtn'))toggleBell()});
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#goalBtn'))setDrawer(!$('drawer').classList.contains('on'))});
+/* Guardar la partida y salir: se recupera al volver con el mismo código */
+function gameCode(){return MODE==='online'?code:'SOLO'}
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('#drawerSave');if(!b||!G)return;
+  if(MODE==='solo')saveSolo();
+  const c=gameCode();
+  store('d21saved',JSON.stringify({mode:MODE,code:c,ts:Date.now()}));
+  setDrawer(false);
+  if(typeof leaveNet==='function'&&MODE==='online'){leaveNet();}
+  MODE=null;G=null;show('menu');
+  const msg=c==='SOLO'?'Partida guardada. Al volver podrás continuarla.':`Partida guardada con el código ${c}. Al volver, los dos podréis continuarla.`;
+  $('menuErr').textContent='';const n=$('netMsg');if(n){n.textContent=msg;n.hidden=false;setTimeout(()=>{n.hidden=true},5000)}
+});
 /* Recuperar la última partida contra la máquina si sales sin querer (solo se guarda la última) */
 function saveSolo(){
   try{
@@ -1998,9 +2013,10 @@ function hostApply(from,a){
 let onlineIds=null;
 function hostOnlyOff(){const h=G&&G.host;return (onlineIds||[]).filter(id=>id!==h)}
 /* ----- Invitado ----- */
-function guestJoin(c){
+function guestJoin(c,resuming){
   leaveNet(true);
-  netRole='guest';MODE='online';code=c;everConnected=false;
+  netRole='guest';MODE='online';code=c;everConnected=!!resuming;
+  if(resuming){show('lobby');$('scrLobby').innerHTML=`<div class="tag">Partida ${esc(c)}</div><p class="muted">Esperando a que quien creó la partida vuelva a abrir la app… En cuanto entre, seguís jugando donde lo dejasteis.</p><div class="actions" style="justify-content:flex-start"><button class="btn alt" type="button" id="leaveBtn">Salir</button></div>`}
   store('d21last',c);store('d21role','guest');resumeCode=c;
   netStatus('Conectando con la partida '+c+'…');
   const p=peer=new Peer();
@@ -2172,7 +2188,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.n){soloN=+b.dataset.n;document.querySelectorAll('#soloSeg button').forEach(x=>x.setAttribute('aria-pressed',x===b));return}
   if(b.dataset.tab){setTab(b.dataset.tab);return}
   if(b.dataset.need){needN=+b.dataset.need;renderOnlineBox();return}
-  if(b.dataset.code){joinTable(b.dataset.code);return}
+  if(b.dataset.code){const c=b.dataset.code,r=load('d21role');if(c===load('d21last')&&(r==='guest'||r==='host'))resumeOnline(c,r);else joinTable(c);return}
   if(b.dataset.rm){netAction({t:'rmCpu',i:+b.dataset.rm});return}
   switch(b.id){
     case 'rankTab':setDrawer(!$('drawer').classList.contains('on'));break;
@@ -2285,15 +2301,30 @@ const hashCode=((location.hash||'').slice(1).match(/^[a-zA-Z]{4}$/)||[])[0];
 if(hashCode)inviteCode=hashCode.toUpperCase();
 setTab(inviteCode?'online':(load('d21tab')||'online'));
 show('menu');renderOnlineBox();
+function resumeOnline(c,role){
+  if(role==='host'&&savedHost(c))hostOpen(c,savedHost(c),false);
+  else guestJoin(c,true);
+}
+function askResume(c,role){
+  const doc=role==='host'?savedHost(c):null;
+  const who=doc?doc.players.filter(p=>p.id!==myId).map(p=>p.name).join(', '):'';
+  $('raTxt').innerHTML=`Partida online <b>${esc(c)}</b>${who?` con ${esc(who)}`:''} sin terminar.${role==='guest'?' Entrarás en cuanto quien la creó la tenga abierta.':' Tus rivales podrán volver a entrar con el mismo código.'}`;
+  $('resumeAsk').hidden=false;
+  $('raYes').onclick=()=>{$('resumeAsk').hidden=true;setTab('online');resumeOnline(c,role)};
+  $('raNo').onclick=()=>{$('resumeAsk').hidden=true;store('d21last',null);store('d21role',null);store('d21host',null);resumeCode=null;renderOnlineBox()};
+}
 function boot(){
   renderOnlineBox();
   if(!peerReady())return;
   lobbyStart();
   const last=load('d21last'),role=load('d21role');
-  if(last&&(!inviteCode||inviteCode===last)){
-    if(role==='host'&&savedHost(last)){hostOpen(last,savedHost(last),false);return}
-    if(role==='guest'){guestJoin(last);return}
-  }
+  if(last&&(!inviteCode||inviteCode===last)&&(role==='guest'||(role==='host'&&savedHost(last)))){askResume(last,role);return}
+  if(!inviteCode&&typeof loadSolo==='function'){const g=loadSolo();if(g){
+    $('raTxt').innerHTML=`Partida contra ${g.players.slice(1).map(p=>esc(p.name)).join(', ')} · ronda ${g.round} · vas con ${g.score[0]} puntos.`;
+    $('resumeAsk').hidden=false;
+    $('raYes').onclick=()=>{$('resumeAsk').hidden=true;setTab('solo');$('soloResumeBtn')?$('soloResumeBtn').click():null};
+    $('raNo').onclick=()=>{$('resumeAsk').hidden=true;try{localStorage.removeItem('d21solo')}catch(e){}renderSoloResume()};
+  }}
   if(last&&last!==inviteCode)resumeCode=last;
   renderOnlineBox();
   if(inviteCode&&$('nameIn').value.trim())joinTable(inviteCode);
