@@ -729,6 +729,14 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 @media (orientation:landscape) and (min-height:541px){.sbnum i{width:28px;height:40px;line-height:40px;font-size:32px}.sbsep{line-height:40px;font-size:24px}.sbname{font-size:11px;max-width:110px}.sbtop{font-size:10px}.sbcol{min-width:60px}.seatR{padding-top:110px}}
 @media (orientation:landscape){.table.pitch .seatT{padding-right:190px;padding-left:40px}}
 @media (orientation:landscape) and (min-height:541px){.table.pitch .seatT{padding-right:280px}}
+.sortbtn{justify-self:center;padding:7px 16px;font-size:13px}
+.sortbtn.done{background:linear-gradient(180deg,#3ee07d,#1fbf5b);color:#04361a;border:0}
+#hand.sortmode{touch-action:none}
+#hand.sortmode .ht{cursor:grab;opacity:1;transition:transform .12s ease,margin .12s ease}
+#hand.sortmode .ht .tile{box-shadow:inset 0 0 0 1px var(--gold),0 0 0 2px rgba(255,255,255,.55),0 3px 6px rgba(0,0,0,.4)}
+#hand.sortmode .ht.dragging{z-index:5;cursor:grabbing;transition:none;opacity:.95}
+#hand.sortmode .ht.gapL{margin-left:22px}
+@media (orientation:landscape){#scrGame .sortbtn{grid-column:3;grid-row:2;align-self:center;padding:5px 12px;font-size:12px}}
 .micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:22;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .micbtn .mic{width:10px;height:15px;border-radius:5px;background:var(--brass);box-shadow:0 0 0 2px rgba(226,171,69,.35)}
 .micbtn.rec{background:#d93b3b;border-color:#ff9a9a}
@@ -831,6 +839,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
     <div class="log" id="log" aria-live="polite"></div>
     <section class="hand-wrap">
       <div class="hand-head"><span class="who" id="handTitle">Tu mano</span><span id="hint" class="muted"></span></div>
+      <button class="btn alt sortbtn" type="button" id="sortBtn" hidden>Colocar fichas</button>
       <div class="hand" id="hand"></div>
       <div class="actions" id="actions"></div>
       <div class="yourturn" id="yourTurn" hidden aria-live="polite">¡Te toca!</div>
@@ -1157,10 +1166,15 @@ function renderGame(){
     $('handTitle').innerHTML=`${G.players[me].name&&G.players[me].name!=='Jugador'?esc(G.players[me].name):'Tu mano'} · <span data-score="${me}">${shownScore(me)}</span>${G.over?` · te quedan ${pipCount(G.hands[me])}`:''}`;
     const myTurn=G.turn===me&&!G.over&&!G.players[me].cpu;
     const playable=G.hands[me].map(t=>sidesFor(G,t).length>0);
-    $('hand').innerHTML=G.hands[me].map((t,i)=>{
-      const cls=!myTurn?'':(playable[i]?'ok':'no');
-      return `<button class="ht ${cls} ${sel===i?'sel':''}" type="button" data-i="${i}" aria-label="Ficha ${t[0]} y ${t[1]}">${tileHTML(t[0],t[1],'v','lg')}</button>`;
+    $('hand').innerHTML=handView().map(i=>{
+      const t=G.hands[me][i],c=tc(t),f=flipped.has(c);
+      const cls=sortMode?'sorting':(!myTurn?'':(playable[i]?'ok':'no'));
+      return `<button class="ht ${cls} ${sel===i&&!sortMode?'sel':''}" type="button" data-i="${i}" data-c="${c}" aria-label="Ficha ${t[0]} y ${t[1]}">${f?tileHTML(t[1],t[0],'v','lg'):tileHTML(t[0],t[1],'v','lg')}</button>`;
     }).join('');
+    $('hand').classList.toggle('sortmode',sortMode);
+    $('sortBtn').hidden=!!G.over||G.phase==='pick'||!G.hands[me].length;
+    $('sortBtn').textContent=sortMode?'Listo':'Colocar fichas';
+    $('sortBtn').classList.toggle('done',sortMode);
     if(G.players[me].cpu){
       hint='La CPU está jugando por ti.';
       act='<button class="btn" type="button" id="reclaimBtn">Volver a jugar yo</button>';
@@ -1537,6 +1551,45 @@ function renderBoardScore(){
   });
   el.innerHTML=`<div class="sbtop">Marcador</div><div class="sbrow">${cols.join('<span class="sbsep">-</span>')}</div>`;
 }
+/* Colocar fichas: tocar gira la ficha, arrastrar la cambia de sitio. Solo cambia cómo la ves tú */
+let sortMode=false,handOrder=[],flipped=new Set(),orderRound=null;
+const tc=t=>''+Math.min(t[0],t[1])+Math.max(t[0],t[1]);
+function handView(){
+  const h=G.hands[me]||[],key=G.round;
+  if(orderRound!==key){orderRound=key;handOrder=[];flipped=new Set();sortMode=false}
+  const codes=h.map(tc);
+  handOrder=handOrder.filter(c=>codes.includes(c));
+  codes.forEach(c=>{if(!handOrder.includes(c))handOrder.push(c)});
+  return handOrder.map(c=>codes.indexOf(c));
+}
+(()=>{
+  let drag=null;
+  document.addEventListener('pointerdown',e=>{
+    if(!sortMode)return;const b=e.target.closest&&e.target.closest('#hand .ht');if(!b)return;
+    e.preventDefault();
+    drag={el:b,c:b.dataset.c,x0:e.clientX,y0:e.clientY,moved:false};
+    try{b.setPointerCapture(e.pointerId)}catch(x){}
+  });
+  document.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    const dx=e.clientX-drag.x0,dy=e.clientY-drag.y0;
+    if(!drag.moved&&Math.hypot(dx,dy)<8)return;
+    drag.moved=true;drag.el.classList.add('dragging');
+    drag.el.style.transform=`translate(${dx}px,${dy}px) scale(1.12)`;
+    const others=[...$('hand').querySelectorAll('.ht')].filter(x=>x!==drag.el);
+    let idx=others.length;
+    for(let k=0;k<others.length;k++){const r=others[k].getBoundingClientRect();if(e.clientX<r.left+r.width/2){idx=k;break}}
+    others.forEach((o,k)=>o.classList.toggle('gapL',k===idx));
+    drag.idx=idx;
+  });
+  const end=()=>{
+    if(!drag)return;const d=drag;drag=null;
+    if(!d.moved){flipped.has(d.c)?flipped.delete(d.c):flipped.add(d.c);renderGame();return}
+    const rest=handOrder.filter(c=>c!==d.c);rest.splice(d.idx??rest.length,0,d.c);handOrder=rest;
+    renderGame();
+  };
+  document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end);
+})();
 function myLabel(){const n=G&&me>=0&&G.players[me]&&G.players[me].name;return n&&n!=='Jugador'?esc(n):'Tú'}
 /* Al acabar la partida: las fichas que les quedan a los demás, en grande encima del mensaje */
 function revealBig(){
@@ -2334,7 +2387,8 @@ function placeSel(side){play({t:'move',i:sel,side})}
 /* ---------- Eventos ---------- */
 document.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
-  if(b.classList.contains('ht')){tapTile(+b.dataset.i);return}
+  if(b.id==='sortBtn'){sortMode=!sortMode;if(sortMode)sel=null;renderGame();return}
+  if(b.classList.contains('ht')){if(sortMode)return;tapTile(+b.dataset.i);return}
   if(b.dataset.side&&sel!==null){play({t:'move',i:sel,side:b.dataset.side});return}
   if(b.id==='champClose'){hideChamp();return}
   if(b.id==='sumBtn'){sumPoints();return}
