@@ -701,7 +701,6 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
       <div id="soloResume"></div>
       <button class="btn" type="button" id="soloBtn">Jugar</button>
     </div>
-    <button class="btn alt exitbtn" type="button" id="exitBtn">Salir de la aplicación</button>
   </section>
 
   <!-- SALA DE ESPERA -->
@@ -1442,9 +1441,9 @@ function historyHTML(){
       if(x.w!=null&&ids.includes(x.w)&&x.pts){const before=tot[k];tot[k]+=x.pts;return `<td><span class="pv">${before}</span> <b class="pa">+${x.pts}</b> <span class="pt">= ${tot[k]}</span></td>`}
       return `<td class="nada">${tot[k]}</td>`;
     }).join('');
-    return `<tr><th>R${x.r}<small>${x.w==null?'empate':x.why==='cierre'?'cierre':'dominó'}</small></th>${cells}</tr>`;
+    return `<tr><th>${x.r}</th>${cells}</tr>`;
   }).join('');
-  return `<div><div class="tag" style="margin-bottom:6px">Anotación</div><div style="overflow-x:auto"><table class="sheet"><thead><tr><th></th>${groups.map(ids=>`<th>${nm(ids)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>
+  return `<div><div class="tag" style="margin-bottom:6px">Anotación</div><div style="overflow-x:auto"><table class="sheet"><thead><tr><th>Ronda</th>${groups.map(ids=>`<th>${nm(ids)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>
     <tfoot><tr><th>Total</th>${groups.map(ids=>`<td>${shownScore(ids[0])}</td>`).join('')}</tr></tfoot></table></div></div>`;
 }
 function setDrawer(on){
