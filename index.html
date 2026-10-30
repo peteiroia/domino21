@@ -650,6 +650,10 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 .bubble{align-items:flex-start}.bubble b{white-space:nowrap}.bubble span{flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.35}
 .bubble.mine{background:rgba(8,26,85,.9);color:#fff}
 .bubble .say{border:0;border-radius:999px;background:var(--brass);color:#0a1f5c;font:800 12px var(--body);padding:5px 10px;cursor:pointer}
+.micbtn .ball{width:22px;height:22px;flex:none}
+.micbtn.rec .ball{animation:spinball 1s linear infinite}
+@keyframes spinball{to{transform:rotate(360deg)}}
+.bubble .ball{width:22px;height:22px;flex:none;margin-top:-1px;animation:rise .4s ease}
 .bubble .bx{border:0;background:none;color:inherit;font-size:18px;cursor:pointer;opacity:.6}
 .chattype{position:fixed;left:50%;bottom:calc(60px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:24;display:flex;gap:6px;width:min(520px,92vw);padding:8px;border-radius:16px;background:rgba(8,26,85,.95);box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .chattype input{flex:1;min-width:0}
@@ -2116,7 +2120,7 @@ $('nameIn').addEventListener('change',()=>store('d21name',$('nameIn').value.trim
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 let srec=null,srText='',srLeft=0,srT=null,chatQ=[];
 function micVisible(){const b=$('micBtn');b.hidden=!(MODE==='online'&&G&&!$('scrGame').hidden);document.body.classList.toggle('online-game',!b.hidden)}
-function micLabel(){const b=$('micBtn');b.classList.toggle('rec',!!srec);b.innerHTML=srec?`<span class="dot"></span>${srLeft} s · Enviar`:'<span class="mic"></span>Hablar'}
+function micLabel(){const b=$('micBtn');b.classList.toggle('rec',!!srec);b.innerHTML=srec?`<svg class="ball" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#fff" stroke="#0a1f5c" stroke-width="1.5"/><path d="M16 9.5l6 4.4-2.3 7.1h-7.4L10 13.9z" fill="#0a1f5c"/><path d="M16 1v8.5M22 13.9l8.2-2.7M19.7 21l5 6.9M12.3 21l-5 6.9M10 13.9l-8.2-2.7" stroke="#0a1f5c" stroke-width="1.5" fill="none"/><path d="M7.3 3.7l2.4 4.1M24.7 3.7l-2.4 4.1M31 18l-4.6-.6M1 18l4.6-.6M16 31v-3.7" stroke="#0a1f5c" stroke-width="1.5"/></svg>${srLeft} s · Enviar`:'<svg class="ball" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#fff" stroke="#0a1f5c" stroke-width="1.5"/><path d="M16 9.5l6 4.4-2.3 7.1h-7.4L10 13.9z" fill="#0a1f5c"/><path d="M16 1v8.5M22 13.9l8.2-2.7M19.7 21l5 6.9M12.3 21l-5 6.9M10 13.9l-8.2-2.7" stroke="#0a1f5c" stroke-width="1.5" fill="none"/><path d="M7.3 3.7l2.4 4.1M24.7 3.7l-2.4 4.1M31 18l-4.6-.6M1 18l4.6-.6M16 31v-3.7" stroke="#0a1f5c" stroke-width="1.5"/></svg>Hablar'}
 function liveText(t){const el=$('voicePlaying');el.hidden=!t;el.textContent=t}
 function micToggle(){
   if(srec){try{srec.stop()}catch(e){}return}
@@ -2151,7 +2155,7 @@ function chatIn(m){
 }
 function renderChat(){
   const box=$('voiceIn');box.hidden=!chatQ.length;
-  box.innerHTML=chatQ.map(c=>`<div class="bubble${c.mine?' mine':''}"><b>${esc(c.from)}:</b> <span>${esc(c.text)}</span><button type="button" class="bx" data-close="${esc(c.id)}" aria-label="Cerrar">×</button></div>`).join('');
+  box.innerHTML=chatQ.map(c=>`<div class="bubble${c.mine?' mine':''}"><svg class="ball" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#fff" stroke="#0a1f5c" stroke-width="1.5"/><path d="M16 9.5l6 4.4-2.3 7.1h-7.4L10 13.9z" fill="#0a1f5c"/><path d="M16 1v8.5M22 13.9l8.2-2.7M19.7 21l5 6.9M12.3 21l-5 6.9M10 13.9l-8.2-2.7" stroke="#0a1f5c" stroke-width="1.5" fill="none"/><path d="M7.3 3.7l2.4 4.1M24.7 3.7l-2.4 4.1M31 18l-4.6-.6M1 18l4.6-.6M16 31v-3.7" stroke="#0a1f5c" stroke-width="1.5"/></svg><b>${esc(c.from)}:</b> <span>${esc(c.text)}</span><button type="button" class="bx" data-close="${esc(c.id)}" aria-label="Cerrar">×</button></div>`).join('');
 }
 function sayIt(id){
   const c=chatQ.find(x=>x.id===id);if(!c||!('speechSynthesis' in window))return;
