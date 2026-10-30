@@ -1317,7 +1317,7 @@ function renderDraw(){
     drawSeen=G.round+':'+G.seq;
     const t=G.log.t,valid=sidesFor(G,t).length>0;
     drawShow={t,valid,until:performance.now()+(valid?1700:0)};
-    if(valid){clack(2);setTimeout(()=>{if(G)renderDraw()},1750)}
+    if(valid){setTimeout(()=>{if(G)renderDraw()},1750)}
   }
   const linger=drawShow&&drawShow.valid&&performance.now()<drawShow.until;
   const on=canDraw()||linger;
