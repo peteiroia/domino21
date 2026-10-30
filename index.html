@@ -1363,14 +1363,14 @@ function rankingHTML(withGain){
     const pct=Math.min(100,d.sc/GOAL*100);
     return `<tr class="${pos===1&&d.sc>0?'lead':''} ${d.mine?'me':''}"><td class="pos">${pos}</td>
       <td class="nm">${d.name}<span class="mini"><i style="width:${pct}%"></i></span></td>
-      <td class="num">${d.wins}</td><td class="num">${d.tiles}</td>
+      <td class="num">${d.wins}</td>
       <td class="num">${gain}<span class="big" data-score-row="${d.ids[0]}">${d.sc}</span></td></tr>`;
   }).join('');
   const top=rowsData[0],left=GOAL-top.sc;
   const who=top.mine?(isPairs(G)?'Tu pareja va en cabeza; os':'Vas en cabeza; te'):`${top.name} ${isPairs(G)?'van en cabeza; les':'va en cabeza; le'}`;
   const note=withGain?'':`<p class="muted">${top.sc>0&&left>0?`${who} faltan ${left} para ganar.`:`Gana ${isPairs(G)?'la pareja que llegue':'quien llegue'} primero a 21 puntos.`}</p>`;
   const pairsNote=isPairs(G)&&!withGain?'<p class="muted">Se juega por parejas: tu compañero es quien está enfrente.</p>':'';
-  return `${pairsNote}<div style="overflow-x:auto"><table class="rank"><thead><tr><th></th><th>${isPairs(G)?'Pareja':'Jugador'}</th><th class="num" title="Rondas ganadas">Rondas</th><th class="num" title="Fichas en la mano">Fichas</th><th class="num">Puntos</th></tr></thead><tbody>${rows}</tbody></table></div>${note}`;
+  return `${pairsNote}<div style="overflow-x:auto"><table class="rank"><thead><tr><th></th><th>${isPairs(G)?'Pareja':'Jugador'}</th><th class="num" title="Rondas ganadas">Rondas</th><th class="num">Puntos</th></tr></thead><tbody>${rows}</tbody></table></div>${note}`;
 }
 function historyHTML(){
   const h=(G.history||[]).slice().reverse();
