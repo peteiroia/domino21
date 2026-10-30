@@ -282,7 +282,6 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
 .hist li{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--line);padding:5px 0}
 .hist b{color:var(--ink)}
 .hist .g{color:var(--brass);font-weight:800;white-space:nowrap}
-@media (min-width:1400px){.drawer-tab{display:none}.drawer{transform:none;box-shadow:none;width:300px}.scrim{display:none}.wrap.withside{margin-right:max(316px,calc((100% - 820px)/2))}}
 .modal{overflow-y:auto}
 .card{max-height:100%;overflow-y:auto;box-sizing:border-box}
 
@@ -573,6 +572,23 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 @media (orientation:landscape) and (max-height:540px){.drawctr{gap:8px;padding:5px 14px 5px 6px;font-size:16px}.drawctr .dcb{width:22px;height:38px}.drawctr .dcn{font-size:26px}}
 .table.pitch .tinfo{padding-right:240px}
 @media (orientation:portrait){.opp.L,.opp.R{--tw:30px;--tl:52px}}
+.goalbtn{display:none}
+/* En horizontal la clasificación se abre desde la portería derecha del campo */
+@media (orientation:landscape){
+  .drawer-tab{display:none}
+  .table.pitch{overflow:visible}
+  .table.pitch > .goalbtn{display:grid;place-items:center;position:absolute;z-index:4;right:-30px;top:50%;transform:translateY(-50%);width:30px;height:min(34%,150px);min-height:96px;padding:0;cursor:pointer;
+    border:3px solid #fff;border-left:0;border-radius:0 6px 6px 0;
+    background:repeating-linear-gradient(45deg,rgba(255,255,255,.28) 0 1px,transparent 1px 7px),repeating-linear-gradient(-45deg,rgba(255,255,255,.28) 0 1px,transparent 1px 7px),rgba(8,26,85,.75);
+    box-shadow:4px 4px 12px rgba(0,0,0,.35)}
+  .goalbtn span{writing-mode:vertical-rl;font:800 11px var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--brass);text-shadow:0 1px 2px rgba(0,0,0,.7)}
+  .goalbtn:hover,.goalbtn:focus-visible{outline:none;box-shadow:0 0 0 2px var(--brass),4px 4px 12px rgba(0,0,0,.35)}
+}
+@media (orientation:landscape) and (min-height:541px){.table.pitch > .goalbtn{right:-40px;width:40px}.goalbtn span{font-size:14px}}
+/* Marco dorado fino alrededor de toda la pantalla */
+html::after{content:"";position:fixed;z-index:90;pointer-events:none;
+  top:env(safe-area-inset-top,0px);right:env(safe-area-inset-right,0px);bottom:env(safe-area-inset-bottom,0px);left:env(safe-area-inset-left,0px);
+  border:1.5px solid var(--gold);box-shadow:inset 0 0 0 1px rgba(242,193,78,.18),inset 0 0 18px rgba(226,171,69,.12)}
 .micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:18;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .micbtn .mic{width:10px;height:15px;border-radius:5px;background:var(--brass);box-shadow:0 0 0 2px rgba(226,171,69,.35)}
 .micbtn.rec{background:#d93b3b;border-color:#ff9a9a}
@@ -656,6 +672,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
     <div class="rules"><span class="lbl">Puntos al ganar la ronda:</span><span class="chip"><b>10</b> = 1</span><span class="chip"><b>11</b> = 2</span><span class="chip"><b>20</b> = 2</span><span class="chip"><b>21</b> = 3</span></div>
     <section class="table pitch" id="table">
       <button class="drawctr" type="button" id="drawCtr" data-openpool="1" aria-label="Fichas para robar"><span class="dcb"></span><span class="dcn" id="drawNum">0</span><span class="dcl">¡A robar!</span></button>
+      <button class="goalbtn" type="button" id="goalBtn" aria-label="Abrir la clasificación"><span>Clasificación</span></button>
       <div class="seatT" id="seatT"></div>
       <div class="seatL" id="seatL"></div>
       <div class="board" id="board"></div>
@@ -1600,6 +1617,7 @@ document.addEventListener('click',e=>{
   try{navigator.app&&navigator.app.exitApp&&navigator.app.exitApp()}catch(x){}
   setTimeout(()=>{if(!window.closed)$('bye').hidden=false},300);
 });
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#goalBtn'))setDrawer(!$('drawer').classList.contains('on'))});
 /* Recuperar la última partida contra la máquina si sales sin querer (solo se guarda la última) */
 function saveSolo(){
   try{
