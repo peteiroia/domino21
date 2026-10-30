@@ -682,7 +682,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 @keyframes spinball{to{transform:rotate(360deg)}}
 .bubble .ball{width:22px;height:22px;flex:none;margin-top:-1px;animation:rise .4s ease}
 .bubble .bx{border:0;background:none;color:inherit;font-size:18px;cursor:pointer;opacity:.6}
-.chattype{position:fixed;left:50%;bottom:calc(60px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:24;display:flex;gap:6px;width:min(520px,92vw);padding:8px;border-radius:16px;background:rgba(8,26,85,.95);box-shadow:0 10px 30px rgba(0,0,0,.45)}
+.chattype{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:24;display:flex;gap:6px;width:min(520px,92vw);padding:8px;border-radius:16px;background:rgba(8,26,85,.95);box-shadow:0 10px 30px rgba(0,0,0,.45)}
 .chattype input{flex:1;min-width:0}
 .voiceplaying{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:23;padding:8px 14px;border-radius:999px;background:rgba(8,26,85,.85);color:#fff;font:700 13px var(--body)}
 @media (orientation:landscape){.micbtn{left:auto;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:7px 12px;font-size:12px}body.online-game #scrGame .hand-wrap{padding-right:110px}}
@@ -2213,7 +2213,7 @@ function micLabel(){const b=$('micBtn');b.classList.toggle('rec',!!srec);b.inner
 function liveText(t){const el=$('voicePlaying');el.hidden=!t;el.textContent=t}
 function micToggle(){
   if(srec){srFinish();return}
-  if(!SR){openTyped();return}
+  if(!SR||isIOS){openTyped();return}
   srText='';srLeft=10;srDone=false;srStopping=false;
   try{srec=new SR()}catch(e){openTyped();return}
   srec.lang='es-ES';srec.interimResults=true;srec.continuous=true;srec.maxAlternatives=1;
@@ -2239,9 +2239,9 @@ function srComplete(){
   const r=srec;srec=null;try{r&&r.abort()}catch(e){}
   micLabel();liveText('');
   const t=srText.trim();
-  if(t)sendChat(t);else{netStatus('No se ha entendido nada. Prueba otra vez.');setTimeout(()=>netStatus(''),2500)}
+  if(t)sendChat(t);else openTyped();
 }
-function openTyped(){$('chatType').hidden=false;$('chatInput').value='';$('chatInput').focus()}
+function openTyped(){$('chatType').hidden=false;$('chatInput').value='';$('chatInput').placeholder=isIOS?'Toca el micrófono del teclado y habla':'Escribe o dicta tu mensaje';$('chatInput').focus()}
 function sendChat(text){
   text=String(text).replace(/\s+/g,' ').trim().slice(0,500);if(!text)return;
   const msg={t:'chat',from:myName(),fromId:myId,text};
