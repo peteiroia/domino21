@@ -585,10 +585,6 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
   .goalbtn:hover,.goalbtn:focus-visible{outline:none;box-shadow:0 0 0 2px var(--brass),4px 4px 12px rgba(0,0,0,.35)}
 }
 @media (orientation:landscape) and (min-height:541px){.table.pitch > .goalbtn{right:-40px;width:40px}.goalbtn span{font-size:14px}}
-/* Marco dorado fino alrededor de toda la pantalla */
-html::after{content:"";position:fixed;z-index:90;pointer-events:none;
-  top:env(safe-area-inset-top,0px);right:env(safe-area-inset-right,0px);bottom:env(safe-area-inset-bottom,0px);left:env(safe-area-inset-left,0px);
-  border:4.5px solid var(--gold);box-shadow:inset 0 0 0 1px rgba(255,236,170,.45),inset 0 0 22px rgba(226,171,69,.18),0 0 0 1px rgba(0,0,0,.3)}
 /* Última jugada: grande y centrada abajo del campo */
 #scrGame .log{display:none}
 .table.pitch .tinfo{display:grid!important;grid-template-columns:1fr auto 1fr;align-items:center;padding-right:8px!important;padding-left:10px;min-height:44px}
@@ -608,8 +604,8 @@ html::after{content:"";position:fixed;z-index:90;pointer-events:none;
 .sndbtn.off{opacity:.75}
 .sndbtn.off .spk,.sndbtn.off .spk::after{filter:grayscale(1) brightness(1.6)}
 .sndbtn.off b{text-decoration:line-through;text-decoration-color:rgba(255,255,255,.6)}
-@media (orientation:landscape){.seatL{padding-top:34px}}
-@media (orientation:portrait){.seatT{padding-top:28px}}
+@media (orientation:landscape){.seatL{padding-top:46px}}
+@media (orientation:portrait){.seatT{padding-top:40px}}
 /* Todo el contenido queda dentro del marco dorado */
 .wrap{padding-left:max(20px,calc(env(safe-area-inset-left,0px) + 12px));padding-right:max(20px,calc(env(safe-area-inset-right,0px) + 12px));padding-block:20px 44px}
 @media (orientation:landscape){
@@ -619,6 +615,21 @@ html::after{content:"";position:fixed;z-index:90;pointer-events:none;
 @media (orientation:landscape) and (min-height:541px){.table.pitch > .goalbtn{right:-38px;width:34px}}
 .drawer-tab{right:5px}
 @media (orientation:landscape){#scrGame .lg{--u:clamp(21px,6.2vh,38px)}#scrGame .hand{padding-bottom:6px}}
+.table.pitch > .sndbtn{display:grid;place-items:center;width:40px;height:40px;padding:0;border-radius:50%;color:var(--brass)}
+.sndbtn svg{width:24px;height:24px}
+.sndbtn .slash{display:none;position:absolute;width:28px;height:3px;border-radius:2px;background:#ff6b6b;transform:rotate(-45deg);box-shadow:0 0 0 1.5px rgba(8,26,85,.9)}
+.sndbtn.off{color:#c7d4f5;opacity:1}
+.sndbtn.off .slash{display:block}
+.sheet{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px}
+.sheet th,.sheet td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:center;vertical-align:middle}
+.sheet thead th{font-size:11px;font-weight:800;color:var(--muted);text-transform:none;letter-spacing:0}
+.sheet tbody th{text-align:left;font-weight:800;color:var(--ink);white-space:nowrap}
+.sheet tbody th small{display:block;font-weight:600;font-size:10px;color:var(--muted)}
+.sheet .pv{color:var(--muted)}.sheet .pa{color:var(--brass)}.sheet .pt{font-weight:800;color:#fff}
+.sheet td.nada{color:var(--muted)}
+.sheet tfoot th,.sheet tfoot td{border-bottom:0;font-family:var(--display);font-size:16px;color:#fff}
+/* Margen pequeño alrededor en horizontal */
+@media (orientation:landscape){.wrap.withside{padding-block:12px 10px;padding-left:max(14px,calc(env(safe-area-inset-left,0px) + 10px));padding-right:max(52px,calc(env(safe-area-inset-right,0px) + 44px))}}
 .micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:18;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .micbtn .mic{width:10px;height:15px;border-radius:5px;background:var(--brass);box-shadow:0 0 0 2px rgba(226,171,69,.35)}
 .micbtn.rec{background:#d93b3b;border-color:#ff9a9a}
@@ -702,7 +713,7 @@ html::after{content:"";position:fixed;z-index:90;pointer-events:none;
     <div class="rules"><span class="lbl">Puntos al ganar la ronda:</span><span class="chip"><b>10</b> = 1</span><span class="chip"><b>11</b> = 2</span><span class="chip"><b>20</b> = 2</span><span class="chip"><b>21</b> = 3</span></div>
     <section class="table pitch" id="table">
       <button class="drawctr" type="button" id="drawCtr" data-openpool="1" aria-label="Fichas para robar"><span class="dcb"></span><span class="dcn" id="drawNum">0</span><span class="dcl">¡A robar!</span></button>
-      <button class="sndbtn" type="button" id="sndBtn" aria-pressed="true"><span class="spk"></span><b>Sonido de turno: sí</b></button>
+      <button class="sndbtn" type="button" id="sndBtn" aria-pressed="true" aria-label="Sonido de aviso de turno: activado"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><i class="slash"></i></button>
       <button class="goalbtn" type="button" id="goalBtn" aria-label="Abrir la clasificación"><span>Clasificación</span></button>
       <div class="seatT" id="seatT"></div>
       <div class="seatL" id="seatL"></div>
@@ -1015,7 +1026,7 @@ function renderGame(){
       :`<span class="cnt">${n} ficha${n===1?'':'s'} en la mano</span>`;
     return `<div class="seat ${G.turn===w&&!G.over?'turn':''}">
       <div class="seat-top"><span class="who">${nm}</span>
-      <span class="pts" data-score="${w}">${sw}<small> / ${GOAL}</small></span></div>
+      <span class="pts" data-score="${w}">${sw}</span></div>
       <div class="track" aria-label="${G.score[w]} de ${GOAL} puntos">${cells}</div>${tiles}</div>`;
   }).join('');
 
@@ -1033,7 +1044,7 @@ function renderGame(){
     $('handTitle').textContent='Observando';
     $('hand').innerHTML='<p class="muted">Esta partida ya empezó. Puedes mirarla en directo.</p>';
   } else {
-    $('handTitle').innerHTML=`${G.players[me].name&&G.players[me].name!=='Jugador'?esc(G.players[me].name):'Tu mano'} · <span data-score="${me}">${shownScore(me)}</span>/${GOAL}${G.over?` · te quedan ${pipCount(G.hands[me])}`:''}`;
+    $('handTitle').innerHTML=`${G.players[me].name&&G.players[me].name!=='Jugador'?esc(G.players[me].name):'Tu mano'} · <span data-score="${me}">${shownScore(me)}</span>${G.over?` · te quedan ${pipCount(G.hands[me])}`:''}`;
     const myTurn=G.turn===me&&!G.over&&!G.players[me].cpu;
     const playable=G.hands[me].map(t=>sidesFor(G,t).length>0);
     $('hand').innerHTML=G.hands[me].map((t,i)=>{
@@ -1250,13 +1261,13 @@ function oppHTML(w,side){
   const small=matchMedia('(orientation: landscape) and (max-height: 540px)').matches,portrait=!matchMedia('(orientation: landscape)').matches,tw=small?36:(portrait&&side!=='T'?30:45);
   const tb=$('table'),tW=(tb&&tb.clientWidth)||360,tH=(tb&&tb.clientHeight)||260;
   const portraitTop=side==='T'&&!matchMedia('(orientation: landscape)').matches;
-  const avail=side==='T'?(portraitTop?tW-24:tW-300):tH-(small?235:170);
+  const avail=side==='T'?(portraitTop?tW-24:tW-300):tH-(small?255:185);
   const step=Math.max(6,Math.min(tw+4,avail/Math.max(1,n)));
   const turn=G.turn===w&&!G.over&&G.phase!=='pick';
   const win=G.over&&sameTeam(G,G.over.winner,w);
   const mate=isPairs(G)&&sameTeam(G,w,me);
   return `<div class="opp ${side}${turn?' turn':''}${reveal?' shown':''}${win?' win':''}${mate?' mate':''}" aria-label="${nm}: ${n} fichas">
-    <span class="opill"><span class="onm">${nm}${mate?' <em>· pareja</em>':''}</span><span class="osc" data-score="${w}">${shownScore(w)}<small>/${GOAL}</small></span><span class="oc">${reveal?'='+pipCount(G.hands[w]):n}</span></span>
+    <span class="opill"><span class="onm">${nm}${mate?' <em>· pareja</em>':''}</span><span class="osc" data-score="${w}">${shownScore(w)}</span>${reveal?`<span class="oc">=${pipCount(G.hands[w])}</span>`:''}</span>
     <span class="ofan" style="--step:${step.toFixed(1)}px">${tiles}</span></div>`;
 }
 function renderOpps(){
@@ -1421,10 +1432,20 @@ function rankingHTML(withGain){
   return `${pairsNote}<div style="overflow-x:auto"><table class="rank"><thead><tr><th></th><th>${isPairs(G)?'Pareja':'Jugador'}</th><th class="num" title="Rondas ganadas">Rondas</th><th class="num">Puntos</th></tr></thead><tbody>${rows}</tbody></table></div>${note}`;
 }
 function historyHTML(){
-  const h=(G.history||[]).slice().reverse();
-  if(!h.length)return `<div><div class="tag">Rondas</div><p class="muted">Ronda ${G.round} en juego. Aquí verás quién gana cada ronda y cuántos puntos se lleva.</p></div>`;
-  return `<div><div class="tag" style="margin-bottom:6px">Rondas jugadas</div><ul class="hist">${h.map(x=>
-    `<li><span>Ronda ${x.r}: ${x.w==null?'empate en el cierre':`<b>${isPairs(G)?teamLabel(x.w).replace(/^Tú\b/,myLabel()):(x.w===me?myLabel():esc(G.players[x.w].name))}</b> ${x.why==='cierre'?'(cierre)':'(dominó)'}`}</span><span class="g">${x.w==null?'0':'+'+x.pts}</span></li>`).join('')}</ul></div>`;
+  const h=G.history||[];
+  const groups=isPairs(G)?[[0,2],[1,3]]:G.players.map((_,i)=>[i]);
+  const nm=ids=>(isPairs(G)?ids.slice().sort((x,y)=>(y===me)-(x===me)):ids).map(i=>i===me?myLabel():esc(G.players[i].name)).join(' y ');
+  if(!h.length)return `<div><div class="tag">Anotación</div><p class="muted">Ronda ${G.round} en juego. Aquí se irán apuntando los puntos de cada ronda.</p></div>`;
+  const tot=groups.map(()=>0);
+  const rows=h.map(x=>{
+    const cells=groups.map((ids,k)=>{
+      if(x.w!=null&&ids.includes(x.w)&&x.pts){const before=tot[k];tot[k]+=x.pts;return `<td><span class="pv">${before}</span> <b class="pa">+${x.pts}</b> <span class="pt">= ${tot[k]}</span></td>`}
+      return `<td class="nada">${tot[k]}</td>`;
+    }).join('');
+    return `<tr><th>R${x.r}<small>${x.w==null?'empate':x.why==='cierre'?'cierre':'dominó'}</small></th>${cells}</tr>`;
+  }).join('');
+  return `<div><div class="tag" style="margin-bottom:6px">Anotación</div><div style="overflow-x:auto"><table class="sheet"><thead><tr><th></th>${groups.map(ids=>`<th>${nm(ids)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>
+    <tfoot><tr><th>Total</th>${groups.map(ids=>`<td>${shownScore(ids[0])}</td>`).join('')}</tr></tfoot></table></div></div>`;
 }
 function setDrawer(on){
   $('drawerBell').hidden=MODE!=='online';$('drawerBell').textContent=$('bellBtn').textContent;
@@ -2006,7 +2027,7 @@ document.addEventListener('visibilitychange',()=>{
 
 /* ---------- Avisos de turno (online) ---------- */
 let alertsOn=load('d21alerts')!=='0',actx=null,lastAlertSeq=null,titleT=null;const baseTitle=document.title;
-function syncBell(){$('bellBtn').setAttribute('aria-pressed',alertsOn);$('bellBtn').textContent=alertsOn?'Avisos: sí':'Avisos: no';const sb=$('sndBtn');if(sb){sb.setAttribute('aria-pressed',alertsOn);sb.classList.toggle('off',!alertsOn);sb.querySelector('b').textContent=alertsOn?'Sonido de turno: sí':'Sonido de turno: no'}}
+function syncBell(){$('bellBtn').setAttribute('aria-pressed',alertsOn);$('bellBtn').textContent=alertsOn?'Avisos: sí':'Avisos: no';const sb=$('sndBtn');if(sb){sb.setAttribute('aria-pressed',alertsOn);sb.classList.toggle('off',!alertsOn);sb.setAttribute('aria-label','Sonido de aviso de turno: '+(alertsOn?'activado':'desactivado'))}}
 syncBell();
 function unlockAudio(){try{if(!actx){const A=window.AudioContext||window.webkitAudioContext;if(A)actx=new A()}if(actx&&actx.state==='suspended')actx.resume()}catch(e){}}
 addEventListener('pointerdown',unlockAudio,{passive:true});
