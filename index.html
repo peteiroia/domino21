@@ -617,6 +617,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
           <button type="button" data-n="3" aria-pressed="false">3</button>
         </div>
       </div>
+      <div id="soloResume"></div>
       <button class="btn" type="button" id="soloBtn">Jugar</button>
     </div>
   </section>
@@ -894,6 +895,7 @@ function show(scr){
   if(!inGame)setDrawer(false);
   if(scr!=='game')$('modal').hidden=true;
   if(scr==='menu'&&typeof renderOnlineBox==='function')renderOnlineBox();
+  if(scr==='menu'&&typeof renderSoloResume==='function')renderSoloResume();
 }
 
 /* ---------- Dibujo de fichas ---------- */
@@ -926,6 +928,7 @@ function logText(){
 }
 
 function renderGame(){
+  if(MODE==='solo'&&G)saveSolo();
   $('seats').innerHTML=G.players.map((p,w)=>{
     const sw=shownScore(w);let cells='';for(let k=1;k<=GOAL;k++)cells+=`<i class="${sw>=k?'on':''}"></i>`;
     const nm=w===me?(p.name&&p.name!=='Jugador'?esc(p.name):'Tú'):esc(p.name)+(p.cpu&&MODE==='online'?' · CPU':'');
@@ -1537,6 +1540,29 @@ function startSolo(){
   G=newGameState(players,'me');
   show('game');renderGame();maybeCpu();
 }
+/* Recuperar la última partida contra la máquina si sales sin querer (solo se guarda la última) */
+function saveSolo(){
+  try{
+    if(G.over&&G.over.type==='game'&&isSummed())localStorage.removeItem('d21solo');
+    else localStorage.setItem('d21solo',JSON.stringify(enc(G)));
+  }catch(e){}
+}
+function loadSolo(){try{const d=JSON.parse(localStorage.getItem('d21solo')||'null');return d&&d.players?dec(d):null}catch(e){return null}}
+function renderSoloResume(){
+  const box=$('soloResume');if(!box)return;
+  const g=loadSolo();
+  if(!g){box.innerHTML='';return}
+  const rivals=g.players.slice(1).map(p=>esc(p.name)).join(', ');
+  box.innerHTML=`<div class="resume"><span>Partida sin terminar contra ${rivals} · ronda ${g.round} · ${g.score[0]} a ${Math.max(...g.score.slice(1))}</span><button class="btn" type="button" id="soloResumeBtn">Continuar</button></div>`;
+}
+document.addEventListener('click',e=>{
+  if(!(e.target.closest&&e.target.closest('#soloResumeBtn')))return;
+  const g=loadSolo();if(!g)return;
+  MODE='solo';me=0;sel=null;shownSeq=0;G=g;
+  if(G.over&&!isSummed()){} 
+  show('game');renderGame();maybeCpu();
+});
+setTimeout(()=>{if(typeof renderSoloResume==='function')renderSoloResume()},0);
 /* Los rivales de la máquina llevan nombres de jugadores del Dépor, al azar y sin repetir */
 const CPU_NAMES=['Aubameyang','Villares','Noubi','David Mella','Yeremay','Loureiro','Angeliño','Zakaria','Antonio Hidalgo','Adama','Quagliata','Mario Soriano','Amatucci','Nsongo Bil','Giménez','Altimira','Ximo','Leo Román','Riki','Luismi Cruz','Asp Jensen','Bright Ede','Ferllo','Germán Parreño','Arnau Comas','Dani Barcia','Marc Casadó','Noé'];
 function randomCpuName(used=[]){const free=CPU_NAMES.filter(n=>!used.includes(n));return free.length?free[rnd(free.length)]:'CPU'}
