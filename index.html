@@ -639,7 +639,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
   .wrap.withside{padding-left:max(46px,calc(env(safe-area-inset-left,0px) + 40px))!important}
 }
 @media (orientation:landscape) and (min-height:541px){.table.pitch > .goalL{left:-38px;width:34px}.wrap.withside{padding-left:max(52px,calc(env(safe-area-inset-left,0px) + 44px))!important}}
-.micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:18;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
+.micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:22;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .micbtn .mic{width:10px;height:15px;border-radius:5px;background:var(--brass);box-shadow:0 0 0 2px rgba(226,171,69,.35)}
 .micbtn.rec{background:#d93b3b;border-color:#ff9a9a}
 .micbtn .dot{width:10px;height:10px;border-radius:50%;background:#fff;animation:blinkctr .8s infinite}
@@ -2123,18 +2123,34 @@ function micVisible(){const b=$('micBtn');b.hidden=!(MODE==='online'&&G&&!$('scr
 function micLabel(){const b=$('micBtn');b.classList.toggle('rec',!!srec);b.innerHTML=srec?`<svg class="ball" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#fff" stroke="#0a1f5c" stroke-width="1.5"/><path d="M16 9.5l6 4.4-2.3 7.1h-7.4L10 13.9z" fill="#0a1f5c"/><path d="M16 1v8.5M22 13.9l8.2-2.7M19.7 21l5 6.9M12.3 21l-5 6.9M10 13.9l-8.2-2.7" stroke="#0a1f5c" stroke-width="1.5" fill="none"/><path d="M7.3 3.7l2.4 4.1M24.7 3.7l-2.4 4.1M31 18l-4.6-.6M1 18l4.6-.6M16 31v-3.7" stroke="#0a1f5c" stroke-width="1.5"/></svg>${srLeft} s · Enviar`:'<svg class="ball" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="15" fill="#fff" stroke="#0a1f5c" stroke-width="1.5"/><path d="M16 9.5l6 4.4-2.3 7.1h-7.4L10 13.9z" fill="#0a1f5c"/><path d="M16 1v8.5M22 13.9l8.2-2.7M19.7 21l5 6.9M12.3 21l-5 6.9M10 13.9l-8.2-2.7" stroke="#0a1f5c" stroke-width="1.5" fill="none"/><path d="M7.3 3.7l2.4 4.1M24.7 3.7l-2.4 4.1M31 18l-4.6-.6M1 18l4.6-.6M16 31v-3.7" stroke="#0a1f5c" stroke-width="1.5"/></svg>Hablar'}
 function liveText(t){const el=$('voicePlaying');el.hidden=!t;el.textContent=t}
 function micToggle(){
-  if(srec){try{srec.stop()}catch(e){}return}
+  if(srec){srFinish();return}
   if(!SR){openTyped();return}
-  srText='';srLeft=10;
+  srText='';srLeft=10;srDone=false;srStopping=false;
   try{srec=new SR()}catch(e){openTyped();return}
   srec.lang='es-ES';srec.interimResults=true;srec.continuous=true;srec.maxAlternatives=1;
   let finalT='';
   srec.onresult=e=>{let interim='';for(let k=e.resultIndex;k<e.results.length;k++){const r=e.results[k];if(r.isFinal)finalT+=r[0].transcript+' ';else interim+=r[0].transcript}srText=(finalT+interim).trim();liveText(srText?'Te escucho: '+srText:'Te escucho…')};
   srec.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed'){netStatus('Permite el micrófono en el navegador para enviar mensajes de voz.');setTimeout(()=>netStatus(''),3500)}};
-  srec.onend=()=>{clearInterval(srT);srec=null;micLabel();liveText('');const t=srText.trim();if(t)sendChat(t);else{netStatus('No se ha entendido nada. Prueba otra vez.');setTimeout(()=>netStatus(''),2500)}};
+  srec.onend=()=>{if(srec&&!srDone&&srLeft>1&&!srStopping){try{srec.start();return}catch(e){}}srComplete()};
   try{srec.start()}catch(e){srec=null;openTyped();return}
   liveText('Te escucho…');micLabel();
-  srT=setInterval(()=>{srLeft--;if(srLeft<=0){try{srec&&srec.stop()}catch(e){}}else micLabel()},1000);
+  srT=setInterval(()=>{srLeft--;if(srLeft<=1){srFinish()}else micLabel()},1000);
+}
+/* Terminar siempre: en iPad/iPhone el reconocimiento a veces no avisa al parar, así que se envía igualmente */
+let srDone=false,srStopping=false;
+function srFinish(){
+  if(!srec||srStopping)return;srStopping=true;
+  clearInterval(srT);
+  try{srec.stop()}catch(e){}
+  setTimeout(srComplete,700);
+}
+function srComplete(){
+  if(srDone)return;srDone=true;
+  clearInterval(srT);
+  const r=srec;srec=null;try{r&&r.abort()}catch(e){}
+  micLabel();liveText('');
+  const t=srText.trim();
+  if(t)sendChat(t);else{netStatus('No se ha entendido nada. Prueba otra vez.');setTimeout(()=>netStatus(''),2500)}
 }
 function openTyped(){$('chatType').hidden=false;$('chatInput').value='';$('chatInput').focus()}
 function sendChat(text){
