@@ -1327,7 +1327,7 @@ function renderDraw(){
   if(sheet.hidden)return;
   $('drawCount').textContent=G.pool.length===1?'Queda 1 ficha':`Quedan ${G.pool.length} fichas`;
   const e=ends(G.chain),need=e?[...new Set([e.L,e.R])]:[];
-  $('needBox').innerHTML=`<span class="nlab">Te vale un</span><div class="nnums">${need.map(n=>`<span class="nn">${bigHalf(n)}<b>${n}</b></span>`).join('<i>o</i>')}</div>`;
+  $('needBox').innerHTML=`<span class="nlab">Te vale un</span><div class="nnums">${need.map(n=>`<span class="nn" aria-label="${n}">${bigHalf(n)}</span>`).join('<i>o</i>')}</div>`;
   $('heap').innerHTML=heapButtons(G.pool,'data-pool',canDraw(),'Robar esta ficha');
   $('drawnBox').innerHTML=drawShow?`<span class="nlab">Has robado</span>${tileHTML(drawShow.t[0],drawShow.t[1],'v','bigt')}<span class="dverdict ${drawShow.valid?'ok':'no'}">${drawShow.valid?'¡Te vale! Juégala':'No vale: coge otra'}</span>`
     :'<span class="nlab">Toca una ficha del montón</span><span class="dph"></span>';
