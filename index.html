@@ -709,6 +709,26 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
   #scrGame .actions #passBtn.cierre{font-size:16px;padding:10px 22px}
   .micbtn{padding:5px 10px!important;font-size:11px!important}.micbtn .ball{width:18px;height:18px}
 }
+.scoreboard{display:none}
+@media (orientation:landscape){
+  .table.pitch > .scoreboard{display:block;position:absolute;top:8px;right:10px;z-index:5;padding:4px 8px 6px;border-radius:6px;
+    background:linear-gradient(#1b1b1b,#0b0b0b);border:2px solid #3a3a3a;box-shadow:0 0 0 2px #0a0a0a,0 6px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08)}
+  .sbtop{text-align:center;font:800 8px var(--body);letter-spacing:.25em;text-transform:uppercase;color:#d7c27a;margin-bottom:3px}
+  .sbrow{display:flex;align-items:flex-start;gap:6px}
+  .sbcol{display:grid;justify-items:center;gap:3px;min-width:44px}
+  .sbnum{display:flex;gap:2px}
+  .sbnum i{font-style:normal;display:block;width:20px;height:28px;line-height:28px;text-align:center;border-radius:3px;
+    background:linear-gradient(#2a2a2a 0 49%,#111 51% 100%);color:#ffd84a;font:700 22px 'Courier New',ui-monospace,monospace;
+    box-shadow:inset 0 0 0 1px #000,inset 0 -1px 0 rgba(255,255,255,.06);position:relative}
+  .sbnum i::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.85)}
+  .sbcol.mine .sbnum i{color:#fff}
+  .sbname{font:800 9px var(--body);letter-spacing:.06em;text-transform:uppercase;color:#e9e9e9;max-width:84px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sbsep{color:#ffd84a;font:700 18px 'Courier New',monospace;line-height:28px;margin-top:12px}
+  .seatR{padding-top:80px}
+}
+@media (orientation:landscape) and (min-height:541px){.sbnum i{width:28px;height:40px;line-height:40px;font-size:32px}.sbsep{line-height:40px;font-size:24px}.sbname{font-size:11px;max-width:110px}.sbtop{font-size:10px}.sbcol{min-width:60px}.seatR{padding-top:110px}}
+@media (orientation:landscape){.table.pitch .seatT{padding-right:190px;padding-left:40px}}
+@media (orientation:landscape) and (min-height:541px){.table.pitch .seatT{padding-right:280px}}
 .micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:22;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .micbtn .mic{width:10px;height:15px;border-radius:5px;background:var(--brass);box-shadow:0 0 0 2px rgba(226,171,69,.35)}
 .micbtn.rec{background:#d93b3b;border-color:#ff9a9a}
@@ -800,6 +820,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
       <button class="drawctr" type="button" id="drawCtr" data-openpool="1" aria-label="Fichas para robar"><span class="dcb"></span><span class="dcn" id="drawNum">0</span><span class="dcl">¡A robar!</span></button>
       <button class="sndbtn" type="button" id="sndBtn" aria-pressed="true" aria-label="Sonido de aviso de turno: activado"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><i class="slash"></i></button>
       <div class="goalL" aria-hidden="true"></div>
+      <div class="scoreboard" id="scoreboard" aria-label="Marcador"></div>
       <button class="goalbtn" type="button" id="goalBtn" aria-label="Abrir la clasificación"><span>Clasificación</span></button>
       <div class="seatT" id="seatT"></div>
       <div class="seatL" id="seatL"></div>
@@ -1189,7 +1210,7 @@ function renderGame(){
     $('modal').hidden=false;
   } else $('modal').hidden=true;
 
-  renderOpps();watchDraws();renderDraw();renderPick();checkChamp();turnAlert();setTimeout(autoSum,0);
+  renderBoardScore();renderOpps();watchDraws();renderDraw();renderPick();checkChamp();turnAlert();setTimeout(autoSum,0);
   if(G.last&&G.last.seq!==shownSeq){
     const fresh=shownSeq!==0||MODE==='solo';
     shownSeq=G.last.seq;
@@ -1504,6 +1525,18 @@ function sumAction(){
   else act(g=>{if(!g.over||g.sumDone)return null;g.sumDone=true;g.seq++;return g},true);
 }
 function autoSum(){if(G&&G.over&&G.sumDone&&!isSummed()&&summing!==roundKey()&&performance.now()>=overAt)sumPoints(false)}
+/* Marcador de estadio antiguo: número grande y el nombre debajo */
+function renderBoardScore(){
+  const el=$('scoreboard');if(!el||!G)return;
+  const groups=isPairs(G)?[[0,2],[1,3]]:G.players.map((_,i)=>[i]);
+  const short=n=>{n=String(n||'');const w=n.split(' ');return (w.length>1&&n.length>9?w[w.length-1]:n).slice(0,10)};
+  const cols=groups.map(ids=>{
+    const nm=isPairs(G)?ids.map(i=>i===me?'Tú':short(G.players[i].name)).join('·'):(ids[0]===me?(myLabel()==='Tú'?'Tú':short(G.players[ids[0]].name)):short(G.players[ids[0]].name));
+    const v=shownScore(ids[0]);
+    return `<div class="sbcol${ids.includes(me)?' mine':''}"><span class="sbnum">${String(v).padStart(2,'0').split('').map(d=>`<i>${d}</i>`).join('')}</span><span class="sbname">${esc(nm)}</span></div>`;
+  });
+  el.innerHTML=`<div class="sbtop">Marcador</div><div class="sbrow">${cols.join('<span class="sbsep">-</span>')}</div>`;
+}
 function myLabel(){const n=G&&me>=0&&G.players[me]&&G.players[me].name;return n&&n!=='Jugador'?esc(n):'Tú'}
 /* Al acabar la partida: las fichas que les quedan a los demás, en grande encima del mensaje */
 function revealBig(){
