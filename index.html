@@ -564,7 +564,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 .vmsg{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:0;background:var(--brass);color:#0a1f5c;font:800 14px var(--body);cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.4);animation:glowb .9s ease-in-out infinite alternate}
 .vmsg .play{width:0;height:0;border-left:10px solid #0a1f5c;border-top:6px solid transparent;border-bottom:6px solid transparent}
 .voiceplaying{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:23;padding:8px 14px;border-radius:999px;background:rgba(8,26,85,.85);color:#fff;font:700 13px var(--body)}
-@media (orientation:landscape){.micbtn{bottom:calc(8px + env(safe-area-inset-bottom,0px));padding:7px 12px;font-size:12px}}
+@media (orientation:landscape){.micbtn{left:auto;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:7px 12px;font-size:12px}body.online-game #scrGame .hand-wrap{padding-right:110px}}
 </style>
 </head>
 <body>
@@ -1883,7 +1883,7 @@ $('nameIn').addEventListener('change',()=>store('d21name',$('nameIn').value.trim
 
 /* ---------- Audios de hasta 10 segundos (solo online). Se escuchan una vez y desaparecen ---------- */
 let rec=null,recChunks=[],recT=null,recLeft=0,voiceQ=[];
-function micVisible(){const b=$('micBtn');b.hidden=!(MODE==='online'&&G&&!$('scrGame').hidden&&typeof MediaRecorder!=='undefined'&&navigator.mediaDevices)}
+function micVisible(){const b=$('micBtn');b.hidden=!(MODE==='online'&&G&&!$('scrGame').hidden&&typeof MediaRecorder!=='undefined'&&navigator.mediaDevices);document.body.classList.toggle('online-game',!b.hidden)}
 function micLabel(){const b=$('micBtn');b.classList.toggle('rec',!!rec);b.innerHTML=rec?`<span class="dot"></span>${recLeft} s · Enviar`:'<span class="mic"></span>Audio'}
 async function micToggle(){
   if(rec){rec.stop();return}
