@@ -2007,8 +2007,17 @@ function hostOpen(c,doc,fresh){
 function hostMsg(conn,m){
   if(!m||typeof m!=='object')return;
   if(m.t==='ping'){try{conn.send({t:'pong'})}catch(e){}return}
+  if(m.t==='hostq'){try{conn.send({t:'hosta',id:myId,seq:hostDoc.seq||0})}catch(e){}
+    const iWin=(hostDoc.seq||0)>(m.seq||0)||((hostDoc.seq||0)===(m.seq||0)&&myId<m.id);
+    if(!iWin){const s=1-(hostDoc.slot||0);setTimeout(()=>{if(netRole==='host'){guestJoin(code,true,true);guestSlot=s}},300)}return}
   if(m.t==='hello'&&typeof m.id==='string'){
     hostConns.set(conn,m.id.slice(0,40));setTimeout(hostOnlineBroadcast,50);
+    const gd=m.d;
+    if(gd&&typeof gd==='object'&&gd.code===hostDoc.code&&gd.status==='playing'&&(gd.seq||0)>(hostDoc.seq||0)&&Array.isArray(gd.players)&&gd.players.length===hostDoc.players.length){
+      hostDoc={...gd,host:myId,slot:hostDoc.slot||0};saveHost();
+      for(const c of hostConns.keys()){try{c.open&&c.send({t:'doc',d:hostDoc})}catch(e){}}
+      onDoc(hostDoc);return;
+    }
     if(!hostApply(m.id,{t:'join',name:m.name}))try{conn.send({t:'doc',d:hostDoc})}catch(e){}
     return;
   }
@@ -2062,11 +2071,14 @@ function hostMissing(){
   probeFails++;guestSlot=1-guestSlot;
   if(G){onlineIds=hostOnlyOff();renderGame()}
   if(probeFails>=2&&iShouldTakeOver()){takeOver();return}
+  if(probeFails===6&&G==null){$('scrLobby').innerHTML=`<div class="tag">Partida ${esc(code)}</div><p class="muted">Buscando la partida… Si tu rival no tiene la app abierta, entrarás en cuanto la abra.</p><div class="actions" style="justify-content:flex-start"><button class="btn alt" type="button" id="leaveBtn">Salir</button></div>`}
   scheduleRetry(probeFails<4?400:2000);
 }
 function iShouldTakeOver(){
   const d=guestDoc||savedHost(code);if(!d||d.status==='closed')return false;
   if(!fallbackHost&&d.status!=='playing')return false;
+  if(d.host===myId)return true;            // yo era la mesa: la vuelvo a abrir
+  if(probeFails>=5)return true;            // nadie contesta en ningún sitio: sigo yo
   const n=d.players.length,hi=d.players.findIndex(p=>p.id===d.host);
   const alive=onlineIds||d.players.map(p=>p.id);
   for(let k=1;k<=n;k++){const p=d.players[(hi+k)%n];if(p.cpu||p.id===d.host)continue;if(p.id===myId)return true;if(alive.includes(p.id))return false}
@@ -2074,7 +2086,7 @@ function iShouldTakeOver(){
 }
 function takeOver(){
   const d=clone(guestDoc||savedHost(code));
-  d.host=myId;d.slot=1-(d.slot||0);
+  d.slot=d.host===myId?(d.slot||0):1-(d.slot||0);d.host=myId;
   netStatus('');
   hostOpen(code,d,false);
 }
@@ -2083,7 +2095,7 @@ function connectToHost(){
   try{if(guestConn)guestConn.close()}catch(e){}
   const conn=guestConn=peer.connect(hostIdOf(code,guestSlot),{reliable:true});
   const t0=setTimeout(()=>{if(conn===guestConn&&!conn.open){try{conn.close()}catch(e){}hostMissing()}},2500);
-  conn.on('open',()=>{clearTimeout(t0);if(conn!==guestConn)return;everConnected=true;probeFails=0;lastHeard=Date.now();netStatus('');conn.send({t:'hello',id:myId,name:myName()})});
+  conn.on('open',()=>{clearTimeout(t0);if(conn!==guestConn)return;everConnected=true;probeFails=0;lastHeard=Date.now();netStatus('');conn.send({t:'hello',id:myId,name:myName(),d:guestDoc||savedHost(code)})});
   conn.on('data',m=>{if(conn!==guestConn||!m)return;lastHeard=Date.now();
     if(m.t==='doc'){guestDoc=m.d;guestSlot=m.d.slot||0;store('d21host',JSON.stringify({code,doc:m.d}));onDoc(m.d)}
     else if(m.t==='chat')chatIn(m);
@@ -2110,10 +2122,26 @@ setInterval(()=>{
     // ¿Me he quedado solo en la mesa? Puede que el otro jugador siga la partida en el otro sitio: lo compruebo de vez en cuando
     const others=hostDoc&&hostDoc.status==='playing'&&hostDoc.players.some(p=>!p.cpu&&p.id!==myId);
     const open=[...hostConns.keys()].some(c=>c.open);
-    if(others&&!open){aloneSince=aloneSince||Date.now();if(Date.now()-aloneSince>(lastProbe?20000:5000)){aloneSince=0;lastProbe=Date.now();guestJoin(code,true,true)}}else aloneSince=0;
+    if(others&&!open)probeOtherHost();
   }
 },3000);
-let aloneSince=0,lastProbe=0;
+/* Si estoy solo con la mesa, miro si otro jugador también ha abierto mesa en el otro sitio; nos quedamos con una sola */
+let probing=false;
+function probeOtherHost(){
+  if(probing||netRole!=='host'||!peer||peer.destroyed||peer.disconnected)return;
+  probing=true;
+  const other=1-(hostDoc.slot||0);
+  let c;try{c=peer.connect(hostIdOf(code,other),{reliable:true})}catch(e){probing=false;return}
+  const done=()=>{probing=false;try{c.close()}catch(e){}};
+  const t=setTimeout(done,2500);
+  c.on('open',()=>{try{c.send({t:'hostq',id:myId,seq:hostDoc.seq||0})}catch(e){}});
+  c.on('data',m=>{
+    if(!m||m.t!=='hosta')return;clearTimeout(t);done();
+    const iWin=(hostDoc.seq||0)>(m.seq||0)||((hostDoc.seq||0)===(m.seq||0)&&myId<m.id);
+    if(!iWin&&netRole==='host'){guestJoin(code,true,true);guestSlot=other}
+  });
+  c.on('error',()=>{clearTimeout(t);done()});
+}
 function failJoin(msg){
   leaveNet();store('d21last',null);store('d21role',null);resumeCode=null;
   show('menu');renderOnlineBox();$('menuErr').textContent=msg;
