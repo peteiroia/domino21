@@ -163,8 +163,7 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .dhead{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .dhead h2{font-size:26px;color:var(--brass)}
-.heap{position:relative;width:min(100%,calc((100dvh - 150px) * 10 / 7));aspect-ratio:10/7;margin:0 auto;border-radius:12px;
-  background:radial-gradient(120% 90% at 50% 40%,var(--felt) 0%,var(--felt-deep) 85%);box-shadow:inset 0 0 0 1px var(--line),inset 0 6px 20px rgba(0,0,0,.35)}
+.heap{position:relative;width:min(100%,calc((100dvh - 160px) * 10 / 8));aspect-ratio:10/8;margin:0 auto;border-radius:12px;overflow:hidden}
 .champ{position:fixed;inset:0;z-index:60;display:grid;place-items:center;overflow:hidden;cursor:pointer;
   background:radial-gradient(ellipse at 50% 35%,#1d4fd6 0%,#0b33b6 35%,#061a5e 80%);
   padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
@@ -182,21 +181,14 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
 @media (orientation:landscape) and (max-height:540px){.cup{width:80px}.ctitle{font-size:44px}.cname{font-size:30px}}
 .dcard.wide{width:min(680px,100%)}
 .pickcount{font-family:var(--display);font-size:22px;color:var(--ivory);font-variant-numeric:tabular-nums}
-.heap.big{width:min(100%,calc((100dvh - 230px) * 10 / 7))}
-.heap.big .hb{width:8%}
+.heap.big{width:min(100%,calc((100dvh - 240px) * 10 / 8))}
 .heap.mix{pointer-events:none}
-.heap.mix .hb{animation:swirl 2s cubic-bezier(.3,.7,.3,1) var(--d) both}
-@keyframes swirl{
-  0%{transform:translate(calc(-50% + var(--sx)),calc(-50% + var(--sy))) rotate(0deg) scale(.9)}
-  35%{transform:translate(calc(-50% + var(--mx)),calc(-50% + var(--my))) rotate(calc(var(--a) + 540deg))}
-  70%{transform:translate(calc(-50% + var(--sx) * .3),calc(-50% + var(--sy) * .3)) rotate(calc(var(--a) - 200deg))}
-  100%{transform:translate(-50%,-50%) rotate(var(--a))}}
 .hb.taken{opacity:0;transform:translate(-50%,-50%) rotate(var(--a)) scale(1.4);transition:all .2s}
 .hb:disabled{cursor:default}
 .mine{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;min-height:52px;align-items:center}
 .mine .slotph{width:24px;height:50px;border-radius:5px;border:1.5px dashed var(--line)}
-@media (orientation:landscape) and (max-height:540px){.heap.big{width:min(100%,calc((100dvh - 150px) * 10 / 7))}.mine{min-height:0}.mine .tile.sm{--u:16px}.mine .slotph{width:16px;height:34px}}
-.hb{position:absolute;width:9.5%;aspect-ratio:9/16;padding:0;border:0;border-radius:10%/6%;cursor:pointer;
+@media (orientation:landscape) and (max-height:540px){.heap.big{width:min(100%,calc((100dvh - 150px) * 10 / 8))}.mine{min-height:0}.mine .tile.sm{--u:16px}.mine .slotph{width:16px;height:34px}}
+.hb{position:absolute;z-index:1;aspect-ratio:9/16;padding:0;border:0;border-radius:10%/6%;cursor:pointer;
   background:#0b33b6 var(--crest) center/cover;transform:translate(-50%,-50%) rotate(var(--a));
   box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.6),2px 3px 5px rgba(0,0,0,.45);transition:transform .15s ease,box-shadow .15s ease}
 .hb:hover,.hb:focus-visible{transform:translate(-50%,-50%) rotate(var(--a)) scale(1.14);box-shadow:0 0 0 3px var(--brass),3px 6px 10px rgba(0,0,0,.5);outline:none;z-index:2}
@@ -330,6 +322,33 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
 @media (max-width:420px){.sm{--u:21px}.lg{--u:32px}.pts{font-size:24px}.bigcode strong{font-size:36px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .drawsheet{z-index:19}
+/* Tapete: campo de fútbol (césped segado a franjas y líneas de cal) */
+.pitch{--cal:rgba(255,255,255,.72);
+  background:radial-gradient(130% 110% at 50% 50%,transparent 55%,rgba(0,0,0,.28) 100%),
+    repeating-linear-gradient(90deg,#2f9142 0 7.142%,#278239 7.142% 14.284%);
+  border:1px solid #1d5f2a;box-shadow:inset 0 0 0 4px rgba(0,0,0,.12),0 6px 18px rgba(0,0,0,.35)}
+.pitch::before{content:"";position:absolute;inset:7px;border:2px solid var(--cal);border-radius:3px;pointer-events:none;z-index:0;
+  background:
+    linear-gradient(var(--cal),var(--cal)) 50% 0/2px 100% no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 0 22%/15% 2px no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 0 78%/15% 2px no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 15% 50%/2px 56% no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 0 36%/6% 2px no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 0 64%/6% 2px no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 6% 50%/2px 28% no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 100% 22%/15% 2px no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 100% 78%/15% 2px no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 85% 50%/2px 56% no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 100% 36%/6% 2px no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 100% 64%/6% 2px no-repeat,
+    linear-gradient(var(--cal),var(--cal)) 94% 50%/2px 28% no-repeat,
+    radial-gradient(circle,var(--cal) 0 3px,transparent 3.5px) 50% 50%/10px 10px no-repeat}
+.pitch::after{content:"";position:absolute;left:50%;top:50%;height:30%;aspect-ratio:1;transform:translate(-50%,-50%);border:2px solid var(--cal);border-radius:50%;pointer-events:none;z-index:0}
+.table.pitch > *{position:relative;z-index:1}
+.table.pitch .tinfo{color:rgba(255,255,255,.9);text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.table.pitch .board .empty{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.table.pitch .board .ts{fill:rgba(0,0,0,.42)}
+.hb.lift{transition:none}
 </style>
 </head>
 <body>
@@ -392,7 +411,7 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
   <section id="scrGame" style="display:grid;gap:14px" hidden>
     <section class="seats" id="seats"></section>
     <div class="rules"><span class="lbl">Puntos al ganar la ronda:</span><span class="chip"><b>10</b> = 1</span><span class="chip"><b>11</b> = 2</span><span class="chip"><b>20</b> = 2</span><span class="chip"><b>21</b> = 3</span></div>
-    <section class="table" id="table">
+    <section class="table pitch" id="table">
       <div class="tinfo" id="tinfo"></div>
       <div class="board" id="board"></div>
     </section>
@@ -427,7 +446,7 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
   <div class="dcard wide" role="dialog" aria-modal="true" aria-labelledby="pickTitle">
     <div class="dhead"><h2 id="pickTitle">Coge tus 7 fichas</h2><span class="pickcount" id="pickCount"></span></div>
     <p class="muted" id="pickTxt" style="margin:0"></p>
-    <div class="heap big" id="pickHeap"></div>
+    <div class="heap big pitch" id="pickHeap"></div>
     <div class="mine" id="pickMine"></div>
     <div class="actions" id="pickActs"></div>
   </div>
@@ -436,7 +455,7 @@ label.f{display:grid;gap:5px;font-size:12px;font-weight:800;letter-spacing:.08em
   <div class="dcard" role="dialog" aria-modal="true" aria-labelledby="drawTitle">
     <div class="dhead"><h2 id="drawTitle">¡A robar!</h2><button class="ghost" type="button" id="hideDraw">Ver la mesa</button></div>
     <p class="muted" style="margin:0">No tienes jugada. Toca la ficha que quieras robar. <span id="drawCount"></span>.</p>
-    <div class="heap" id="heap"></div>
+    <div class="heap pitch" id="heap"></div>
   </div>
 </div>
 <div class="turnflash" id="turnflash" hidden aria-live="assertive">¡Te toca!</div>
@@ -734,18 +753,84 @@ function poolHTML(){
 /* Ventana para robar: fichas boca abajo desordenadas y giradas, cada una con su sitio fijo durante la ronda */
 let drawHidden=false;
 function seeded(n){let x=(n*2654435761)>>>0;return()=>{x^=x<<13;x>>>=0;x^=x>>17;x^=x<<5;x>>>=0;return x/4294967296}}
-function heapLayout(tiles=G.pool,salt=0,minD=14){
-  const ps=tiles.map((t,k)=>{const r=seeded(G.round*977+salt*7919+t[0]*31+t[1]*7+13);r();r();
-    return {k,x:10+r()*80,y:12+r()*76,a:Math.floor(r()*360),m1:r(),m2:r()}});
-  for(let it=0;it<40;it++){
-    for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){
-      const A=ps[i],B=ps[j];let dx=B.x-A.x,dy=(B.y-A.y)*.7,d=Math.hypot(dx,dy);
-      if(d<minD){if(d<.01){dx=1;dy=0;d=1}const f=(minD-d)/2/d;A.x-=dx*f;B.x+=dx*f;A.y-=dy*f/.7;B.y+=dy*f/.7}
-    }
-    ps.forEach(p=>{p.x=Math.min(91,Math.max(9,p.x));p.y=Math.min(88,Math.max(12,p.y))});
-  }
-  return ps;
+/* Posición de cada ficha boca abajo en el tapete (unidades: ancho 100, alto 80).
+   Se calcula una vez por reparto para las 28 fichas, sin que ninguna pise a otra, y no cambia al coger o robar. */
+const HW=100,HH=80,ALL28=(()=>{const a=[];for(let x=0;x<=6;x++)for(let y=x;y<=6;y++)a.push(''+x+y);return a})();
+let layoutCache={key:null,map:null,s:0};
+function obbHit(A,B){
+  const axes=[A.a,A.a+Math.PI/2,B.a,B.a+Math.PI/2];
+  for(const t of axes){const ux=Math.cos(t),uy=Math.sin(t);
+    const pa=Math.abs(A.hw*Math.cos(A.a-t))+Math.abs(A.hh*Math.sin(A.a-t));
+    const pb=Math.abs(B.hw*Math.cos(B.a-t))+Math.abs(B.hh*Math.sin(B.a-t));
+    if(Math.abs((B.x-A.x)*ux+(B.y-A.y)*uy)>pa+pb)return false}
+  return true;
 }
+function tileLayout(){
+  const key=G.round+':'+(G.dealN||0);
+  if(layoutCache.key===key)return layoutCache;
+  let s=8.2,map=null;
+  for(let tries=0;tries<10&&!map;tries++,s*=.93){
+    const r=seeded(G.round*7919+(G.dealN||0)*104729+tries*31+11);for(let k=0;k<5;k++)r();
+    const order=ALL28.slice().sort(()=>0);for(let i=order.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[order[i],order[j]]=[order[j],order[i]]}
+    const placed=[],m={};let ok=true;
+    for(const c of order){
+      let done=false;
+      for(let at=0;at<700&&!done;at++){
+        const a=r()*Math.PI*2,hw=s/2+.45,hh=s*16/9/2+.45;
+        const ex=Math.abs(hw*Math.cos(a))+Math.abs(hh*Math.sin(a)),ey=Math.abs(hw*Math.sin(a))+Math.abs(hh*Math.cos(a));
+        const R={x:ex+2+r()*(HW-2*ex-4),y:ey+2+r()*(HH-2*ey-4),a,hw,hh};
+        if(placed.every(P=>!obbHit(P,R))){placed.push(R);m[c]={x:R.x,y:R.y,a:a*180/Math.PI};done=true}
+      }
+      if(!done){ok=false;break}
+    }
+    if(ok)map=m;
+  }
+  layoutCache={key,map,s:s/.93};
+  return layoutCache;
+}
+function heapButtons(tiles,attr,enabled,label){
+  const L=tileLayout();
+  return tiles.map((t,k)=>{const c=''+t[0]+t[1],p=L.map[c];
+    return `<button type="button" class="hb" ${attr}="${attr==='data-pool'?k:c}" data-c="${c}" ${enabled?'':'disabled'} style="left:${p.x.toFixed(2)}%;top:${(p.y/HH*100).toFixed(2)}%;width:${L.s.toFixed(2)}%;--a:${p.a.toFixed(1)}deg" aria-label="${label}"></button>`}).join('');
+}
+/* Animación de revolver: las fichas se juntan en un montón, giran en dos remolinos como si las movieran dos manos y se reparten por el campo */
+const MIXT=2900;let mixRun=null;
+function clack(n){try{if(!actx)return;const t=actx.currentTime;for(let i=0;i<n;i++){const d=Math.random()*.9;
+  const len=.035,buf=actx.createBuffer(1,Math.floor(actx.sampleRate*len),actx.sampleRate),ch=buf.getChannelData(0);
+  for(let k=0;k<ch.length;k++)ch[k]=(Math.random()*2-1)*Math.pow(1-k/ch.length,6);
+  const src=actx.createBufferSource(),f=actx.createBiquadFilter(),g=actx.createGain();src.buffer=buf;f.type='bandpass';f.frequency.value=1800+Math.random()*2200;f.Q.value=1.4;g.gain.value=.18+Math.random()*.25;
+  src.connect(f).connect(g).connect(actx.destination);src.start(t+d)}}catch(e){}}
+function startMix(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){mixRun=null;return}
+  const t0=performance.now();mixRun={t0};
+  let lastClack=0;
+  const ease=u=>1-Math.pow(1-u,3);
+  const step=now=>{
+    if(!mixRun||mixRun.t0!==t0)return;
+    const t=(now-t0)/1000,L=tileLayout();
+    if(t*1000-lastClack>110&&t<2.3){lastClack=t*1000;clack(t<1.9?2:1)}
+    document.querySelectorAll('#pickHeap .hb').forEach(el=>{
+      const c=el.dataset.c,p=L.map[c];if(!p)return;
+      const r=seeded(parseInt(c,10)*977+(G.dealN||0)*13+5);r();
+      const side=parseInt(c,10)%2?1:-1,cx=50+side*15,cy=40,rad=7+r()*17,th0=r()*Math.PI*2,w=side*(3+r()*2.2),spin=side*(260+r()*380),a0=r()*360;
+      const sx=50+(r()-.5)*7,sy=40+(r()-.5)*5;
+      const orbit=tt=>{const th=th0+w*(tt-.3),rr=rad*(1+.25*Math.sin(3*tt+th0));return[cx+rr*Math.cos(th),cy+rr*Math.sin(th)*.75,a0+spin*(tt-.3)]};
+      let x,y,a,lift;
+      if(t<.3){x=sx;y=sy;a=a0;lift=0}
+      else if(t<2){const o=orbit(t),b=ease(Math.min(1,(t-.3)/.35));x=sx+(o[0]-sx)*b;y=sy+(o[1]-sy)*b;a=o[2];lift=1}
+      else{const o=orbit(2),u=Math.min(1,(t-2)/.85),e=ease(u);let fa=p.a;while(fa-o[2]>180)fa-=360;while(o[2]-fa>180)fa+=360;
+        x=o[0]+(p.x-o[0])*e;y=o[1]+(p.y-o[1])*e;a=o[2]+(fa-o[2])*e;lift=1-u}
+      el.classList.add('lift');
+      el.style.left=x.toFixed(2)+'%';el.style.top=(y/HH*100).toFixed(2)+'%';
+      el.style.transform=`translate(-50%,-50%) rotate(${a.toFixed(1)}deg) scale(${(1+lift*.08).toFixed(3)})`;
+      el.style.boxShadow=`inset 0 0 0 1.5px rgba(255,255,255,.6),${(2+lift*7).toFixed(1)}px ${(3+lift*10).toFixed(1)}px ${(5+lift*10).toFixed(1)}px rgba(0,0,0,${(.45-lift*.1).toFixed(2)})`;
+    });
+    if(t*1000<MIXT)requestAnimationFrame(step);
+    else{mixRun=null;clack(4);if(G&&G.phase==='pick')renderPick()}
+  };
+  requestAnimationFrame(step);
+}
+
 /* ---------- Celebración del campeón ---------- */
 const FEM=new Set('carmen isabel raquel pilar mar ines belen rocio consuelo dolores mercedes lourdes nieves beatriz ruth rut noemi rosario montserrat montse sol luz paz abril itziar iratxe uxue maite esther ester miriam judith ingrid astrid sigrid iris zoe chloe irene margot nuria noelia aurora encarnacion asuncion concepcion begona soledad trinidad maribel yolanda elisabet isabel lis flor amparo leonor almudena reyes rosaura carmela nahia arantxa alicia jasmin yasmin ines noor inmaculada inma jone ane nerea maider leire uxia antia iciar ione ainhoa vivian karen evelyn lilian ruth guadalupe mabel arwen elen alejandrina'.split(' '));
 const MASC_A=new Set('borja luca josema joshua josua nicola mustafa elias isaias jeremias matias tobias ezequias andrea_m garcia sasha misha kosta jonatan'.split(' '));
@@ -793,16 +878,18 @@ function checkChamp(){
     if(key!==champKey){champKey=key;showChamp(G.over.winner)}
   } else if(celebrating)hideChamp();
 }
-let mixKey=null,mixT=null;
+let mixKey=null;
 function renderPick(){
   const sheet=$('pickSheet');
   const on=G&&G.phase==='pick'&&!G.over;
   sheet.hidden=!on;
-  if(!on)return;
+  if(!on){mixRun=null;return}
   const mine=me>=0?G.hands[me].length:PICK, need=Math.max(0,PICK-mine);
   const key=G.round+':'+G.dealN;
-  const mixing=key!==mixKey||mixT!==null;
-  if(key!==mixKey){mixKey=key;clearTimeout(mixT);mixT=setTimeout(()=>{mixT=null;if(G&&G.phase==='pick')renderPick()},2300)}
+  let fresh=false;
+  if(key!==mixKey){mixKey=key;fresh=true}
+  if(fresh)startMix();
+  const mixing=!!mixRun;
   $('pickCount').textContent=me>=0?`${mine} de ${PICK}`:'';
   const waiting=G.players.map((p,i)=>i!==me&&G.hands[i].length<PICK?`${esc(p.name)} (${G.hands[i].length}/${PICK})`:null).filter(Boolean);
   $('pickTxt').innerHTML=mixing?'Revolviendo las fichas…':
@@ -810,13 +897,9 @@ function renderPick(){
     need?`Toca ${need===PICK?'7 fichas':need===1?'1 ficha más':need+' fichas más'} para formar tu mano.`:
     `¡Ya tienes tus 7! Esperando a ${waiting.join(', ')||'los demás'}…`;
   const can=!mixing&&me>=0&&need>0;
-  const ps=heapLayout(G.pool,G.dealN,G.pool.length>16?10.5:14);
   const heap=$('pickHeap');
   heap.classList.toggle('mix',mixing);
-  heap.innerHTML=ps.map(p=>{
-    const sx=((50-p.x)/8*100).toFixed(0),sy=((50-p.y)/8*100*.7).toFixed(0);
-    const mx=((p.m1-.5)*500).toFixed(0),my=((p.m2-.5)*300).toFixed(0);
-    return `<button type="button" class="hb" data-pick="${''+G.pool[p.k][0]+G.pool[p.k][1]}" ${can?'':'disabled'} style="left:${p.x.toFixed(1)}%;top:${p.y.toFixed(1)}%;--a:${p.a}deg;--sx:${sx}%;--sy:${sy}%;--mx:${mx}%;--my:${my}%;--d:${(p.m1*.35).toFixed(2)}s" aria-label="Coger esta ficha"></button>`}).join('');
+  heap.innerHTML=heapButtons(G.pool,'data-pick',can,'Coger esta ficha');
   $('pickMine').innerHTML=me>=0?G.hands[me].map(t=>tileHTML(t[0],t[1],'v','sm')).join('')+'<span class="slotph"></span>'.repeat(need):'';
   $('pickActs').innerHTML=MODE==='online'&&isHost()&&waiting.length&&!mixing?'<button class="btn alt" type="button" id="autofillBtn">Repartir las que faltan</button>':'';
 }
@@ -827,7 +910,7 @@ function renderDraw(){
   sheet.hidden=!on||drawHidden||!$('modal').hidden;
   if(sheet.hidden)return;
   $('drawCount').textContent=G.pool.length===1?'Queda 1 ficha':`Quedan ${G.pool.length} fichas`;
-  $('heap').innerHTML=heapLayout().map(p=>`<button type="button" class="hb" data-pool="${p.k}" style="left:${p.x.toFixed(1)}%;top:${p.y.toFixed(1)}%;--a:${p.a}deg" aria-label="Robar esta ficha"></button>`).join('');
+  $('heap').innerHTML=heapButtons(G.pool,'data-pool',true,'Robar esta ficha');
 }
 function rankingHTML(withGain){
   const r=G.result,hist=G.history||[];
