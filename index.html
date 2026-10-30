@@ -665,6 +665,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
   .card.compact:has(.revealbig){max-width:min(600px,86vw)}
 }
 @media (orientation:landscape) and (max-height:380px){.card.compact .bigpts .bp{font-size:26px}.card.compact h2{font-size:15px}.rbig{--u:11px}}
+.yourturn.away{background:rgba(255,143,98,.18);border-color:var(--hot);color:#ffe0d2}
 .micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:22;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .micbtn .mic{width:10px;height:15px;border-radius:5px;background:var(--brass);box-shadow:0 0 0 2px rgba(226,171,69,.35)}
 .micbtn.rec{background:#d93b3b;border-color:#ff9a9a}
@@ -685,6 +686,9 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 .chattype input{flex:1;min-width:0}
 .voiceplaying{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:23;padding:8px 14px;border-radius:999px;background:rgba(8,26,85,.85);color:#fff;font:700 13px var(--body)}
 @media (orientation:landscape){.micbtn{left:auto;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:7px 12px;font-size:12px}body.online-game #scrGame .hand-wrap{padding-right:110px}}
+.invitetoast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:80;display:grid;gap:10px;justify-items:center;width:min(420px,92vw);padding:14px 16px;border-radius:18px;background:linear-gradient(170deg,rgba(29,79,196,.97),rgba(8,26,85,.97));border:1px solid var(--brass);box-shadow:0 18px 40px rgba(0,0,0,.5);color:#fff;text-align:center;animation:rise .25s ease}
+.invitetoast .itxt{font-size:16px}.invitetoast .itxt b{color:var(--brass)}
+.invitetoast .iacts{display:flex;gap:8px}
 </style>
 </head>
 <body>
@@ -822,6 +826,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 <button class="micbtn" type="button" id="micBtn" hidden aria-label="Enviar un mensaje de voz que se transcribe"></button>
 <div class="voicein" id="voiceIn" hidden></div>
 <div class="voiceplaying" id="voicePlaying" hidden></div>
+<div class="invitetoast" id="inviteToast" hidden role="alertdialog"></div>
 <div class="turnflash" id="turnflash" hidden aria-live="assertive">¡Te toca!</div>
 <div class="modal" id="modal" hidden><div class="card" id="card"></div></div>
 <button class="drawer-tab" id="rankTab" type="button" hidden aria-controls="drawer">Clasificación</button>
@@ -1114,7 +1119,9 @@ function renderGame(){
   const myT=me>=0&&G.turn===me&&!G.over&&G.phase!=='pick'&&!G.players[me].cpu;
   $('yourTurn').hidden=!!G.over||G.phase==='pick'||G.turn<0;
   $('yourTurn').classList.toggle('wait',!myT);
-  $('yourTurn').textContent=myT?'¡Tu turno!':`Esperando turno · juega ${G.players[G.turn]?G.players[G.turn].name:''}`;$('hint').textContent=hint;
+  const tp=G.players[G.turn],away=MODE==='online'&&typeof onlineIds!=='undefined'&&onlineIds&&tp&&!tp.cpu&&!onlineIds.includes(tp.id);
+  $('yourTurn').classList.toggle('away',!!away);
+  $('yourTurn').textContent=myT?'¡Tu turno!':away?`Esperando a ${tp.name}: ha salido un momento de la app…`:`Esperando turno · juega ${tp?tp.name:''}`;$('hint').textContent=hint;
 
   if(G.over&&performance.now()<overShowAt(G))$('modal').hidden=true;
   else if(G.over){
@@ -1762,7 +1769,7 @@ function renderOnlineBox(){
   const invite=inviteCode?`<div class="invite"><h3>¡Te han invitado!</h3><p>Escribe tu nombre arriba y entra en la partida <b>${esc(inviteCode)}</b>.</p>
       <button class="btn big" type="button" data-code="${esc(inviteCode)}">Entrar en la partida</button></div>`:'';
   const resume=resumeCode&&resumeCode!==inviteCode?`<div class="resume"><span>Tienes una partida en curso (<b>${esc(resumeCode)}</b>).</span><button class="btn" type="button" data-code="${esc(resumeCode)}">Volver a la partida</button></div>`:'';
-  box.innerHTML=`<div style="display:grid;gap:12px">
+  const html=`<div style="display:grid;gap:12px">
     ${invite}${resume}
     ${local?'<p class="muted" style="color:var(--hot)">Estás abriendo el archivo desde tu móvil u ordenador. Para invitar a otros, súbelo antes a una web (por ejemplo Netlify o GitHub Pages) y abre esa dirección.</p>':''}
     <div class="tag">¿Cuántos vais a jugar?</div>
@@ -1773,29 +1780,37 @@ function renderOnlineBox(){
     ${installHTML()}
     <p class="muted">Sin cuentas ni apps: tus amigos verán tu partida aquí o entrarán con el enlace. El móvil que crea la partida hace de mesa, así que debe tenerla abierta mientras jugáis.</p>
   </div>`;
+  if(box._html===html)return;box._html=html;box.innerHTML=html;
   if(keep)$('codeIn').value=keep;
 }
 function gamesHTML(){
   const now=Date.now();
   const list=Object.values(lob.games||{}).filter(g=>g&&g.code&&g.n<g.need&&now-(g.ts||0)<90000&&!(lob.mine&&lob.mine.code===g.code)).sort((a,b)=>b.ts-a.ts);
   const st=lob.role?'' :'<span class="muted" style="font-size:12px"> · buscando…</span>';
-  return `<div class="tag"><span class="livedot"></span>Partidas disponibles (${list.length})${st}</div>`+
+  return usersHTML()+`<div class="tag"><span class="livedot"></span>Partidas disponibles (${list.length})${st}</div>`+
     (list.length?`<div class="open-list">${list.map(g=>`<div class="avail"><div class="info"><b>Partida de ${esc(g.host)}</b><span>${g.n} de ${g.need} jugadores${g.need===4?' · por parejas':''}</span></div><button class="btn" type="button" data-code="${esc(g.code)}">Unirse</button></div>`).join('')}</div>`
       :'<p class="muted" style="margin:0">Todavía no hay partidas esperando. Crea una y aparecerá aquí para los demás.</p>');
 }
+function usersHTML(){
+  const now=Date.now();
+  const us=Object.values(lob.users||{}).filter(u=>u&&u.id&&u.id!==myId&&now-(u.ts||0)<70000).sort((a,b)=>a.name.localeCompare(b.name));
+  return `<div class="tag"><span class="livedot"></span>Conectados ahora (${us.length})</div>`+
+    (us.length?`<div class="open-list">${us.map(u=>`<div class="avail"><div class="info"><b>${esc(u.name)}</b><span>${u.busy?'Jugando una partida':'Con la app abierta'}</span></div>${u.busy?'':`<button class="btn" type="button" data-challenge="${esc(u.id)}">Retar</button>`}</div>`).join('')}</div>`
+      :'<p class="muted" style="margin:0">Ahora mismo no hay nadie más con la app abierta.</p>');
+}
 /* ---------- Tablón de partidas sin servidor: el primer móvil que abre el juego hace de tablón; si se va, otro toma el relevo ---------- */
-const lob={peer:null,role:null,conn:null,conns:new Set(),games:{},mine:null,timer:null};
+const lob={peer:null,role:null,conn:null,conns:new Set(),games:{},mine:null,timer:null,users:{},challenge:null};
 function lobbyRender(){if(!$('scrMenu').hidden&&document.activeElement?.id!=='codeIn')renderOnlineBox()}
 function lobbyRetry(ms){clearTimeout(lob.timer);lob.timer=setTimeout(lobbyStart,ms)}
 function lobbyReset(){try{lob.peer&&lob.peer.destroy()}catch(e){}lob.peer=null;lob.role=null;lob.conn=null;lob.conns=new Set()}
 function lobbyStart(){
   if(!peerReady()||lob.peer)return;
   const p=lob.peer=new Peer(PREFIX+'lobby');
-  p.on('open',()=>{if(lob.peer!==p)return;lob.role='reg';lob.games={};if(lob.mine)lob.games[lob.mine.code]={...lob.mine,ts:Date.now(),owner:'self'};lobbyRender()});
+  p.on('open',()=>{if(lob.peer!==p)return;lob.role='reg';lob.games={};lob.users={};if(lob.mine)lob.games[lob.mine.code]={...lob.mine,ts:Date.now(),owner:'self'};regSelf();lobbyRender()});
   p.on('connection',c=>{
     lob.conns.add(c);
     c.on('data',m=>regMsg(c,m));
-    const drop=()=>{lob.conns.delete(c);let ch=false;for(const k in lob.games)if(lob.games[k].owner===c){delete lob.games[k];ch=true}if(ch)regBroadcast()};
+    const drop=()=>{lob.conns.delete(c);let ch=false;for(const k in lob.games)if(lob.games[k].owner===c){delete lob.games[k];ch=true}for(const k in lob.users)if(lob.users[k].owner===c){delete lob.users[k];ch=true}if(ch)regBroadcast()};
     c.on('close',drop);c.on('error',drop);
   });
   p.on('error',e=>{
@@ -1810,21 +1825,27 @@ function lobbyJoin(){
   p.on('open',()=>{
     if(lob.peer!==p)return;
     const c=p.connect(PREFIX+'lobby',{reliable:true});
-    c.on('open',()=>{if(lob.peer!==p)return;lob.role='cli';lob.conn=c;c.send({t:'list'});if(lob.mine)c.send({t:'reg',g:lob.mine})});
-    c.on('data',m=>{if(m&&m.t==='games'&&m.games&&typeof m.games==='object'){lob.games=m.games;lobbyRender()}});
+    c.on('open',()=>{if(lob.peer!==p)return;lob.role='cli';lob.conn=c;c.send({t:'list'});c.send({t:'hello',u:meUser()});if(lob.mine)c.send({t:'reg',g:lob.mine})});
+    c.on('data',m=>{if(!m)return;if(m.t==='games'&&m.games&&typeof m.games==='object'){lob.games=m.games;if(m.users)lob.users=m.users;lobbyRender()}else if(m.t==='invite')gotInvite(m)});
     c.on('close',()=>{if(lob.peer!==p)return;lobbyReset();lobbyRetry(800+Math.random()*2500)});
   });
   p.on('error',e=>{if(lob.peer!==p)return;lobbyReset();lobbyRetry(e.type==='peer-unavailable'?300+Math.random()*1500:4000)});
 }
 function regPublic(){const o={};for(const k in lob.games){const g=lob.games[k];o[k]={code:g.code,host:g.host,n:g.n,need:g.need,ts:g.ts}}return o}
-function regBroadcast(){const msg={t:'games',games:regPublic()};for(const c of lob.conns){try{c.open&&c.send(msg)}catch(e){}}lobbyRender()}
+function usersPublic(){const o={};for(const k in lob.users){const u=lob.users[k];o[k]={id:u.id,name:u.name,busy:u.busy,ts:u.ts}}return o}
+function regSelf(){if(lob.role==='reg'){lob.users[myId]={...meUser(),ts:Date.now(),owner:'self'}}}
+function regBroadcast(){regSelf();const msg={t:'games',games:regPublic(),users:usersPublic()};for(const c of lob.conns){try{c.open&&c.send(msg)}catch(e){}}lobbyRender()}
 function regMsg(c,m){
   if(!m||typeof m!=='object')return;
-  if(m.t==='list'){try{c.send({t:'games',games:regPublic()})}catch(e){}return}
+  if(m.t==='list'){try{c.send({t:'games',games:regPublic(),users:usersPublic()})}catch(e){}return}
+  if(m.t==='hello'&&m.u&&typeof m.u.id==='string'){lob.users[m.u.id.slice(0,40)]={id:m.u.id.slice(0,40),name:String(m.u.name||'?').slice(0,14),busy:!!m.u.busy,ts:Date.now(),owner:c};regBroadcast();return}
+  if(m.t==='invite'&&typeof m.to==='string'){const inv={t:'invite',from:String(m.from||'?').slice(0,14),fromId:String(m.fromId||''),code:String(m.code||'').slice(0,4)};
+    if(m.to===myId){gotInvite(inv);return}
+    const u=lob.users[m.to];if(u&&u.owner&&u.owner!=='self'){try{u.owner.send(inv)}catch(e){}}return}
   if(m.t==='reg'&&m.g&&/^[A-Z]{4}$/.test(m.g.code)){lob.games[m.g.code]={code:m.g.code,host:String(m.g.host||'?').slice(0,14),n:+m.g.n||1,need:+m.g.need||2,ts:Date.now(),owner:c};regBroadcast();return}
   if(m.t==='unreg'&&m.code&&lob.games[m.code]&&lob.games[m.code].owner===c){delete lob.games[m.code];regBroadcast()}
 }
-setInterval(()=>{if(lob.role==='reg'){const now=Date.now();let ch=false;for(const k in lob.games){const g=lob.games[k];if(g.owner==='self')g.ts=now;else if(now-g.ts>75000){delete lob.games[k];ch=true}}if(ch)regBroadcast()}},15000);
+setInterval(()=>{if(lob.role==='reg'){const now=Date.now();let ch=false;for(const k in lob.games){const g=lob.games[k];if(g.owner==='self')g.ts=now;else if(now-g.ts>75000){delete lob.games[k];ch=true}}for(const k in lob.users){if(lob.users[k].owner!=='self'&&now-lob.users[k].ts>70000){delete lob.users[k];ch=true}}regBroadcast()}},15000);
 /* La partida que yo he creado se anuncia mientras espera jugadores */
 function lobbySync(){
   const d=netRole==='host'&&hostDoc;
@@ -1832,8 +1853,39 @@ function lobbySync(){
   const prev=lob.mine;lob.mine=want;
   if(lob.role==='reg'){if(prev&&(!want||prev.code!==want.code))delete lob.games[prev.code];if(want)lob.games[want.code]={...want,ts:Date.now(),owner:'self'};regBroadcast()}
   else if(lob.role==='cli'&&lob.conn&&lob.conn.open){try{if(want)lob.conn.send({t:'reg',g:want});else if(prev)lob.conn.send({t:'unreg',code:prev.code})}catch(e){}}
+  if(want&&lob.challenge)sendInvite(want.code);
+  presenceNow();
 }
-setInterval(()=>{if(lob.mine&&lob.role==='cli'&&lob.conn&&lob.conn.open)try{lob.conn.send({t:'reg',g:lob.mine})}catch(e){}},25000);
+setInterval(()=>{if(lob.role==='cli'&&lob.conn&&lob.conn.open){try{lob.conn.send({t:'hello',u:meUser()});if(lob.mine)lob.conn.send({t:'reg',g:lob.mine})}catch(e){}}},20000);
+function meUser(){return {id:myId,name:myName(),busy:MODE==='online'&&!!G&&!G.over}}
+function presenceNow(){if(lob.role==='cli'&&lob.conn&&lob.conn.open){try{lob.conn.send({t:'hello',u:meUser()})}catch(e){}}else if(lob.role==='reg')regBroadcast()}
+$('nameIn').addEventListener('change',presenceNow);
+/* Retar a un usuario conectado: se crea una partida de 2 y le llega la invitación */
+function challenge(id){
+  if(needName())return;
+  const u=lob.users[id];if(!u)return;
+  lob.challenge={to:id,name:u.name};needN=2;createTable();
+}
+function sendInvite(code){
+  const c=lob.challenge;if(!c)return;lob.challenge=null;
+  const inv={t:'invite',to:c.to,from:myName(),fromId:myId,code};
+  if(lob.role==='reg'){const u=lob.users[c.to];if(u&&u.owner&&u.owner!=='self')try{u.owner.send({t:'invite',from:inv.from,fromId:myId,code})}catch(e){}}
+  else if(lob.conn&&lob.conn.open){try{lob.conn.send(inv)}catch(e){}}
+  netStatus(`Reto enviado a ${c.name}. Esperando a que acepte…`);setTimeout(()=>netStatus(''),5000);
+}
+function gotInvite(m){
+  if(!m||!/^[A-Z]{4}$/.test(m.code||''))return;
+  const box=$('inviteToast');
+  box.innerHTML=`<div class="itxt"><b>${esc(m.from)}</b> te reta a una partida</div><div class="iacts"><button class="btn" type="button" data-accept="${esc(m.code)}">Aceptar</button><button class="btn alt" type="button" data-decline="1">Ahora no</button></div>`;
+  box.hidden=false;
+  try{navigator.vibrate&&navigator.vibrate([150,80,150])}catch(e){}ding&&ding();
+  clearTimeout(box._t);box._t=setTimeout(()=>{box.hidden=true},60000);
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest&&e.target.closest('[data-challenge],[data-accept],[data-decline]');if(!b)return;
+  if(b.dataset.challenge)challenge(b.dataset.challenge);
+  else{$('inviteToast').hidden=true;if(b.dataset.accept){if(MODE==='online'&&netRole)leaveTableAndMenu();setTab('online');joinTable(b.dataset.accept)}}
+});
 let installEvt=null;
 const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
@@ -1897,7 +1949,7 @@ function hostOpen(c,doc,fresh){
     p.on('open',()=>{if(p!==peer)return;openTries=0;netStatus('');saveHost();onDoc(hostDoc)});
     p.on('connection',conn=>{
       conn.on('data',m=>hostMsg(conn,m));
-      const drop=()=>hostConns.delete(conn);
+      const drop=()=>{hostConns.delete(conn);hostOnlineBroadcast()};
       conn.on('close',drop);conn.on('error',drop);
     });
     p.on('disconnected',()=>{if(p===peer&&!p.destroyed)setTimeout(()=>{try{p.reconnect()}catch(e){}},1500)});
@@ -1921,7 +1973,7 @@ function hostOpen(c,doc,fresh){
 function hostMsg(conn,m){
   if(!m||typeof m!=='object')return;
   if(m.t==='hello'&&typeof m.id==='string'){
-    hostConns.set(conn,m.id.slice(0,40));
+    hostConns.set(conn,m.id.slice(0,40));setTimeout(hostOnlineBroadcast,50);
     if(!hostApply(m.id,{t:'join',name:m.name}))try{conn.send({t:'doc',d:hostDoc})}catch(e){}
     return;
   }
@@ -1929,6 +1981,13 @@ function hostMsg(conn,m){
   if(m.t==='act'&&m.a&&typeof m.a==='object')hostApply(id,m.a);
   else if(m.t==='leave')hostApply(id,{t:'leave'});
   else if(m.t==='chat'&&typeof m.text==='string'){const msg={t:'chat',from:String(m.from||'').slice(0,14),fromId:id,text:m.text.slice(0,500)};chatIn(msg);for(const [c,cid] of hostConns){if(cid!==id&&c.open)try{c.send(msg)}catch(e){}}}
+}
+function hostOnlineBroadcast(){
+  if(netRole!=='host'||!hostDoc)return;
+  const ids=[myId,...new Set([...hostConns].filter(([c])=>c.open).map(([,id])=>id))];
+  const msg={t:'online',ids};
+  for(const c of hostConns.keys()){try{c.open&&c.send(msg)}catch(e){}}
+  onlineIds=ids;if(G&&!$('scrGame').hidden)renderGame();
 }
 function hostApply(from,a){
   const next=docAction(clone(hostDoc),from,a);
@@ -1939,6 +1998,8 @@ function hostApply(from,a){
   return true;
 }
 
+let onlineIds=null;
+function hostOnlyOff(){const h=G&&G.host;return (onlineIds||[]).filter(id=>id!==h)}
 /* ----- Invitado ----- */
 function guestJoin(c){
   leaveNet(true);
@@ -1952,7 +2013,7 @@ function guestJoin(c){
     if(p!==peer)return;
     if(e.type==='peer-unavailable'){
       if(!everConnected){failJoin('No hay ninguna partida abierta con el código '+c+'. Comprueba el código o pide a quien la creó que tenga la partida abierta.');return}
-      netStatus('Quien creó la partida no está conectado. Esperando a que vuelva…');scheduleRetry(5000);return;
+      onlineIds=hostOnlyOff();if(G)renderGame();scheduleRetry(4000);return;
     }
     if(e.type==='browser-incompatible'){failJoin('Este navegador no permite jugar online. Prueba con Chrome o Safari actualizados.');return}
     netStatus('Problema de conexión. Reintentando…');scheduleRetry(3000);
@@ -1963,8 +2024,8 @@ function connectToHost(){
   try{if(guestConn)guestConn.close()}catch(e){}
   const conn=guestConn=peer.connect(PREFIX+code,{reliable:true});
   conn.on('open',()=>{if(conn!==guestConn)return;everConnected=true;netStatus('');conn.send({t:'hello',id:myId,name:myName()})});
-  conn.on('data',m=>{if(conn!==guestConn||!m)return;if(m.t==='doc')onDoc(m.d);else if(m.t==='chat')chatIn(m)});
-  conn.on('close',()=>{if(conn===guestConn&&netRole==='guest'){netStatus('Se perdió la conexión con la mesa. Reconectando…');scheduleRetry(2500)}});
+  conn.on('data',m=>{if(conn!==guestConn||!m)return;if(m.t==='doc')onDoc(m.d);else if(m.t==='chat')chatIn(m);else if(m.t==='online'&&Array.isArray(m.ids)){onlineIds=m.ids;if(G&&!$('scrGame').hidden)renderGame()}});
+  conn.on('close',()=>{if(conn===guestConn&&netRole==='guest'){onlineIds=hostOnlyOff();if(G)renderGame();scheduleRetry(2500)}});
   conn.on('error',()=>{});
 }
 function scheduleRetry(ms){
