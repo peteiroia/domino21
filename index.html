@@ -1076,14 +1076,14 @@ function renderGame(){
       ?`<p>Nadie puede jugar. Gana ${isPairs(G)?'la pareja':'quien'} que suma menos en sus fichas${w==null?', pero hay empate':''}.${pairWhy}</p>`
       :`<p>${w===me?'Te has quedado':`${label(w)} se ha quedado`} sin fichas.${pairWhy}</p>`;
     const big=w!=null&&r.pts?`<div class="bigpts${summed?' done':''}"><span class="bp">+${r.pts}</span><span class="bpl">punto${r.pts===1?'':'s'} para ${forWhom(w)}</span></div>`
-      :'<div class="bigpts"><span class="bpl">Esta partidilla nadie suma puntos.</span></div>';
+      :'<div class="bigpts"><span class="bpl">Esta partida nadie suma puntos.</span></div>';
     const parts=(r.pips||[]).filter(x=>x>0);
     const tot=`<p class="tot">Se suman las fichas de todos: <b>${parts.length>1?parts.join(' + ')+' = ':''}${r.total}</b> → <b>${r.pts}</b> punto${r.pts===1?'':'s'} <span>(cada 10 o fracción, 1)</span></p>`;
     let btns='';
     if(!summed&&w!=null&&r.pts)btns=`<div class="actions"><button class="btn big sum" type="button" id="sumBtn">Sumar puntos</button></div>`;
     else if(o.type==='game')btns=`<div class="actions">${hostBtns?'<button class="btn" type="button" id="againBtn">Revancha</button>':''}<button class="btn alt" type="button" id="toMenuBtn">Menú</button></div>`;
-    else if(hostBtns)btns=`<div class="actions"><button class="btn big" type="button" id="nextBtn">Siguiente partidilla</button></div>`;
-    else btns=`<p class="muted" style="text-align:center">Esperando a que ${hostName} empiece la siguiente partidilla…</p>`;
+    else if(hostBtns)btns=`<div class="actions"><button class="btn big" type="button" id="nextBtn">Siguiente partida</button></div>`;
+    else btns=`<p class="muted" style="text-align:center">Esperando a que ${hostName} empiece la siguiente partida…</p>`;
     const final=o.type==='game'&&summed;
     $('card').classList.toggle('compact',!final);
     $('card').innerHTML=final?`<h2>Clasificación final</h2>${rankingHTML(true)}${btns}`:`<h2>${title}</h2>${why}${big}${tot}${btns}`;
@@ -1350,7 +1350,7 @@ function renderDraw(){
   $('drawnBox').innerHTML=drawShow?`<span class="nlab">Has robado</span>${tileHTML(drawShow.t[0],drawShow.t[1],'v','bigt')}<span class="dverdict ${drawShow.valid?'ok':'no'}">${drawShow.valid?'¡Te vale! Juégala':'No vale: coge otra'}</span>`
     :'<span class="nlab">Toca una ficha del montón</span><span class="dph"></span>';
 }
-/* "Sumar puntos": los puntos de la partidilla se ven antes de sumarse al marcador */
+/* "Sumar puntos": los puntos de la partida se ven antes de sumarse al marcador */
 let summedKey=null;
 const roundKey=()=>G?G.round+':'+G.seq:'';
 let overSeen=null,overAt=0;
