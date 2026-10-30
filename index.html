@@ -1557,7 +1557,9 @@ document.addEventListener('click',e=>{
   const b=e.target.closest&&e.target.closest('#exitBtn,#byeBack');if(!b)return;
   if(b.id==='byeBack'){$('bye').hidden=true;return}
   try{window.close()}catch(x){}
-  setTimeout(()=>{if(!window.closed)$('bye').hidden=false},250);
+  try{window.open('','_self');window.close()}catch(x){}
+  try{navigator.app&&navigator.app.exitApp&&navigator.app.exitApp()}catch(x){}
+  setTimeout(()=>{if(!window.closed)$('bye').hidden=false},300);
 });
 /* Recuperar la última partida contra la máquina si sales sin querer (solo se guarda la última) */
 function saveSolo(){
