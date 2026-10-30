@@ -518,6 +518,10 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
   .opp.L .ofan > i,.opp.R .ofan > i{width:var(--tw);height:var(--tl)}
   .drawer-foot{padding-top:6px;padding-bottom:8px}.drawer-foot .btn{padding:6px 10px;font-size:12px}
 }
+.opp.mate .opill{border-color:rgba(255,255,255,.7);background:rgba(255,255,255,.18)}
+.opill em{font-style:normal;font-weight:700;color:var(--brass);font-size:.9em}
+.opp.win .opill,.opp.mate.win .opill{background:var(--brass);border-color:var(--brass);color:#0a1f5c}
+.opp.win .opill em{color:#0a1f5c}
 </style>
 </head>
 <body>
@@ -541,6 +545,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
     <p>Coloca fichas que encajen en un extremo. Si no puedes, <b>¡a robar!</b>: eliges una de las fichas que quedan boca abajo. Si no queda ninguna, pasas.</p>
     <p>La ronda la gana quien se queda sin fichas. Si la mesa se <b>cierra</b> (nadie puede jugar), gana quien tenga <b>menos puntos</b> en sus fichas.</p>
     <p>El ganador suma los puntos de las fichas de <b>todos los jugadores</b> y cada 10 o fracción es un punto: <b>10</b> = 1 · <b>11</b> = 2 · <b>20</b> = 2 · <b>21</b> = 3. Quien llegue primero a <b>21 puntos</b> gana la partida.</p>
+    <p>Con <b>4 jugadores se juega por parejas</b>: tu compañero es quien se sienta enfrente. Cuando uno de los dos domina, gana la pareja y suma los puntos de las fichas de todos. Si se cierra la mesa, gana la pareja que sume menos entre sus dos jugadores.</p>
   </div>
 
   <!-- MENÚ -->
@@ -749,9 +754,13 @@ function sidesFor(g,t){
   if(g.mustSix&&!g.chain.length){const d=g.openD??6;return t[0]===d&&t[1]===d?['R']:[]}
   return fits(t,g.chain);
 }
+/* Con 4 jugadores se juega por parejas: cada uno va con el de enfrente (posiciones 0-2 y 1-3) */
+const isPairs=g=>g&&g.players&&g.players.length===4;
+const mateOf=(g,i)=>isPairs(g)&&i!=null?(i+2)%4:null;
+const sameTeam=(g,a,b)=>a!=null&&b!=null&&(a===b||(isPairs(g)&&a%2===b%2));
 function roundScore(g,winner,why){
   const pips=g.hands.map(pipCount),total=pips.reduce((a,b)=>a+b,0),pts=winner!=null?Math.ceil(total/10):0;
-  if(winner!=null)g.score[winner]+=pts;
+  if(winner!=null){g.score[winner]+=pts;const m=mateOf(g,winner);if(m!=null)g.score[m]+=pts}
   g.result={pips,total,pts,winner};
   (g.history=g.history||[]).push({r:g.round,w:winner,pts,why});
   g.last={w:winner,pts,seq:g.seq};
@@ -774,8 +783,14 @@ function applyPass(g,who,drew=0){
   g.passes++; g.seq++;
   g.log={k:'pass',w:who,drew};
   if(g.passes>=g.players.length){
-    const pips=g.hands.map(pipCount),min=Math.min(...pips),low=pips.map((p,i)=>p===min?i:-1).filter(i=>i>=0);
-    const w=low.length===1?low[0]:null;
+    const pips=g.hands.map(pipCount);let w=null;
+    if(isPairs(g)){
+      const a=pips[0]+pips[2],b=pips[1]+pips[3];
+      if(a<b)w=pips[0]<=pips[2]?0:2;else if(b<a)w=pips[1]<=pips[3]?1:3;
+    } else {
+      const min=Math.min(...pips),low=pips.map((p,i)=>p===min?i:-1).filter(i=>i>=0);
+      w=low.length===1?low[0]:null;
+    }
     roundScore(g,w,'cierre');
     g.over={type:w!=null&&g.score[w]>=GOAL?'game':'blocked',winner:w,why:'cierre'};
     g.starter=nextOf(g,g.starter);
@@ -918,10 +933,11 @@ function renderGame(){
     const o=G.over,w=o.winner,r=G.result||{pips:[],total:0,pts:0},summed=isSummed();
     const hostBtns=isHost(),hostName=esc((G.players.find(p=>p.id===G.host)||{name:'el anfitrión'}).name);
     const title=o.why==='cierre'?'Mesa cerrada':(w===me?'¡Has dominado!':`¡Domina ${label(w)}!`);
+    const pairWhy=isPairs(G)&&w!=null?` Gana ${forWhom(w)==='tu pareja'?'tu pareja':forWhom(w)}.`:'';
     const why=o.why==='cierre'
-      ?`<p>Nadie puede jugar. Gana la partidilla quien suma menos en sus fichas${w==null?', pero hay empate':''}.</p>`
-      :`<p>${w===me?'Te has quedado':`${label(w)} se ha quedado`} sin fichas.</p>`;
-    const big=w!=null&&r.pts?`<div class="bigpts${summed?' done':''}"><span class="bp">+${r.pts}</span><span class="bpl">punto${r.pts===1?'':'s'} para ${w===me?'ti':label(w)}</span></div>`
+      ?`<p>Nadie puede jugar. Gana ${isPairs(G)?'la pareja':'quien'} que suma menos en sus fichas${w==null?', pero hay empate':''}.${pairWhy}</p>`
+      :`<p>${w===me?'Te has quedado':`${label(w)} se ha quedado`} sin fichas.${pairWhy}</p>`;
+    const big=w!=null&&r.pts?`<div class="bigpts${summed?' done':''}"><span class="bp">+${r.pts}</span><span class="bpl">punto${r.pts===1?'':'s'} para ${forWhom(w)}</span></div>`
       :'<div class="bigpts"><span class="bpl">Esta partidilla nadie suma puntos.</span></div>';
     const tot=`<p class="tot">Fichas que quedan: <b>${r.total}</b> → <b>${r.pts}</b> punto${r.pts===1?'':'s'} <span>(cada 10 o fracción, 1)</span></p>`;
     let btns='';
@@ -1046,11 +1062,14 @@ function isFemaleName(n){
 let champKey=null,confT=null,celebrating=false;
 function fanfare(){try{if(!actx)return;const t=actx.currentTime;[[523,0,.18],[659,.18,.18],[784,.36,.18],[1047,.54,.5],[784,.98,.16],[1047,1.14,.7]].forEach(([f,d,l])=>{const o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.0001,t+d);g.gain.exponentialRampToValueAtTime(.25,t+d+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d+l);o.connect(g).connect(actx.destination);o.start(t+d);o.stop(t+d+l+.05)})}catch(e){}}
 function showChamp(w){
-  const p=G.players[w],fem=isFemaleName(p.name),meWon=w===me;
-  $('champTitle').textContent=fem?'¡CAMPEONA!':'¡CAMPEÓN!';
-  $('champName').textContent=meWon?(fem?'¡Eres la campeona!':'¡Eres el campeón!'):(p.name||'Jugador');
-  $('champSub').textContent=`${meWon?(myName()||'Tú'):p.name} gana con ${G.score[w]} puntos en ${G.round} ronda${G.round===1?'':'s'}.`;
-  if(meWon)$('champName').textContent=(p.name&&p.name!=='Jugador'?p.name:'Tú');
+  const ids=isPairs(G)?[w,mateOf(G,w)]:[w];
+  const fem=ids.every(i=>isFemaleName(G.players[i].name)),meWon=ids.includes(me),pair=ids.length>1;
+  $('champTitle').textContent=pair?(fem?'¡CAMPEONAS!':'¡CAMPEONES!'):(fem?'¡CAMPEONA!':'¡CAMPEÓN!');
+  const names=ids.map(i=>G.players[i].name||'Jugador');
+  $('champName').textContent=names.join(' y ');
+  $('champSub').textContent=pair
+    ?`${meWon?'Tu pareja gana':'La pareja gana'} con ${G.score[w]} puntos en ${G.round} ronda${G.round===1?'':'s'}.`
+    :`${meWon?(fem?'¡Eres la campeona!':'¡Eres el campeón!')+' ':''}${names[0]} gana con ${G.score[w]} puntos en ${G.round} ronda${G.round===1?'':'s'}.`;
   $('champ').hidden=false;celebrating=true;
   try{navigator.vibrate&&navigator.vibrate([120,60,120,60,300])}catch(e){}
   fanfare();confetti();
@@ -1091,9 +1110,10 @@ function oppHTML(w,side){
   const tiles=reveal?G.hands[w].map(t=>tileHTML(t[0],t[1],'v','tiny')).join(''):'<i></i>'.repeat(n);
   const step=side==='T'?Math.max(6,Math.min(22,280/Math.max(1,n))):Math.max(5,Math.min(19,190/Math.max(1,n)));
   const turn=G.turn===w&&!G.over&&G.phase!=='pick';
-  const win=G.over&&G.over.winner===w;
-  return `<div class="opp ${side}${turn?' turn':''}${reveal?' shown':''}${win?' win':''}" aria-label="${nm}: ${n} fichas">
-    <span class="opill"><span class="onm">${nm}</span><span class="osc" data-score="${w}">${shownScore(w)}<small>/${GOAL}</small></span><span class="oc">${reveal?'='+pipCount(G.hands[w]):n}</span></span>
+  const win=G.over&&sameTeam(G,G.over.winner,w);
+  const mate=isPairs(G)&&sameTeam(G,w,me);
+  return `<div class="opp ${side}${turn?' turn':''}${reveal?' shown':''}${win?' win':''}${mate?' mate':''}" aria-label="${nm}: ${n} fichas">
+    <span class="opill"><span class="onm">${nm}${mate?' <em>· pareja</em>':''}</span><span class="osc" data-score="${w}">${shownScore(w)}<small>/${GOAL}</small></span><span class="oc">${reveal?'='+pipCount(G.hands[w]):n}</span></span>
     <span class="ofan" style="--step:${step.toFixed(1)}px">${tiles}</span></div>`;
 }
 function renderOpps(){
@@ -1177,16 +1197,28 @@ function renderDraw(){
 let summedKey=null;
 const roundKey=()=>G?G.round+':'+G.seq:'';
 function isSummed(){return !G||!G.over||summedKey===roundKey()||!(G.result&&G.result.winner!=null&&G.result.pts)}
+function teamLabel(i){
+  if(i==null)return '';
+  const m=mateOf(G,i);
+  if(m==null)return label(i);
+  const a=[i,m].sort((x,y)=>(y===me)-(x===me));
+  return a.map(label).join(' y ');
+}
+function forWhom(w){
+  if(isPairs(G))return sameTeam(G,w,me)?'tu pareja':`la pareja de ${teamLabel(w)}`;
+  return w===me?'ti':label(w);
+}
 function shownScore(i){
   if(!G.over||isSummed())return G.score[i];
-  const r=G.result;return G.score[i]-(r&&r.winner===i?r.pts:0);
+  const r=G.result;return G.score[i]-(r&&sameTeam(G,r.winner,i)?r.pts:0);
 }
 function sumPoints(){
   if(!G||!G.over||isSummed())return;
   const key=roundKey(),w=G.result.winner,from=shownScore(w),to=G.score[w];
   $('sumBtn').disabled=true;$('sumBtn').textContent='Sumando…';
   document.querySelector('.bigpts')?.classList.add('fly');
-  const els=()=>[...document.querySelectorAll(`[data-score-row="${w}"],[data-score="${w}"]`)];
+  const ids=[w,mateOf(G,w)].filter(x=>x!=null);
+  const els=()=>ids.flatMap(id=>[...document.querySelectorAll(`[data-score-row="${id}"],[data-score="${id}"]`)]);
   let v=from;const steps=Math.max(1,to-from);
   const tick=()=>{
     v++;els().forEach(el=>{el.firstChild.nodeValue=String(v);el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop')});
@@ -1204,29 +1236,31 @@ function sumPoints(){
 }
 function rankingHTML(withGain){
   const r=G.result,hist=G.history||[];
-  const wins=G.players.map((_,i)=>hist.filter(h=>h.w===i).length);
-  const sc=G.players.map((_,i)=>shownScore(i));
-  const order=G.players.map((p,i)=>i).sort((a,b)=>sc[b]-sc[a]||wins[b]-wins[a]||a-b);
+  const groups=isPairs(G)?[[0,2],[1,3]]:G.players.map((_,i)=>[i]);
+  const rowsData=groups.map(ids=>({ids,sc:shownScore(ids[0]),wins:hist.filter(h=>ids.includes(h.w)).length,tiles:ids.reduce((n,i)=>n+G.hands[i].length,0),
+    name:(isPairs(G)?ids.slice().sort((x,y)=>(y===me)-(x===me)):ids).map(i=>i===me?'Tú':esc(G.players[i].name)).join(' y '),mine:ids.includes(me)}));
+  rowsData.sort((a,b)=>b.sc-a.sc||b.wins-a.wins);
   let pos=0,prev=null;
-  const rows=order.map((i,k)=>{
-    if(sc[i]!==prev){pos=k+1;prev=sc[i]}
-    const gain=withGain&&G.over&&isSummed()&&r&&r.winner===i&&r.pts?`<span class="gain">+${r.pts}</span> `:'';
-    const nm=i===me?'Tú':esc(G.players[i].name);
-    const pct=Math.min(100,sc[i]/GOAL*100);
-    return `<tr class="${pos===1&&sc[i]>0?'lead':''} ${i===me?'me':''}"><td class="pos">${pos}</td>
-      <td class="nm">${nm}<span class="mini"><i style="width:${pct}%"></i></span></td>
-      <td class="num">${wins[i]}</td><td class="num">${G.hands[i].length}</td>
-      <td class="num">${gain}<span class="big" data-score-row="${i}">${sc[i]}</span></td></tr>`;
+  const rows=rowsData.map((d,k)=>{
+    if(d.sc!==prev){pos=k+1;prev=d.sc}
+    const gain=withGain&&G.over&&isSummed()&&r&&d.ids.includes(r.winner)&&r.pts?`<span class="gain">+${r.pts}</span> `:'';
+    const pct=Math.min(100,d.sc/GOAL*100);
+    return `<tr class="${pos===1&&d.sc>0?'lead':''} ${d.mine?'me':''}"><td class="pos">${pos}</td>
+      <td class="nm">${d.name}<span class="mini"><i style="width:${pct}%"></i></span></td>
+      <td class="num">${d.wins}</td><td class="num">${d.tiles}</td>
+      <td class="num">${gain}<span class="big" data-score-row="${d.ids[0]}">${d.sc}</span></td></tr>`;
   }).join('');
-  const lead=sc[order[0]],left=GOAL-lead;
-  const note=withGain?'':`<p class="muted">${lead>0&&left>0?`${order[0]===me?'Vas en cabeza; te':esc(G.players[order[0]].name)+' va en cabeza; le'} faltan ${left} para ganar.`:'Gana quien llegue primero a 21 puntos.'}</p>`;
-  return `<div style="overflow-x:auto"><table class="rank"><thead><tr><th></th><th>Jugador</th><th class="num" title="Rondas ganadas">Rondas</th><th class="num" title="Fichas en la mano">Fichas</th><th class="num">Puntos</th></tr></thead><tbody>${rows}</tbody></table></div>${note}`;
+  const top=rowsData[0],left=GOAL-top.sc;
+  const who=top.mine?(isPairs(G)?'Tu pareja va en cabeza; os':'Vas en cabeza; te'):`${top.name} ${isPairs(G)?'van en cabeza; les':'va en cabeza; le'}`;
+  const note=withGain?'':`<p class="muted">${top.sc>0&&left>0?`${who} faltan ${left} para ganar.`:`Gana ${isPairs(G)?'la pareja que llegue':'quien llegue'} primero a 21 puntos.`}</p>`;
+  const pairsNote=isPairs(G)&&!withGain?'<p class="muted">Se juega por parejas: tu compañero es quien está enfrente.</p>':'';
+  return `${pairsNote}<div style="overflow-x:auto"><table class="rank"><thead><tr><th></th><th>${isPairs(G)?'Pareja':'Jugador'}</th><th class="num" title="Rondas ganadas">Rondas</th><th class="num" title="Fichas en la mano">Fichas</th><th class="num">Puntos</th></tr></thead><tbody>${rows}</tbody></table></div>${note}`;
 }
 function historyHTML(){
   const h=(G.history||[]).slice().reverse();
   if(!h.length)return `<div><div class="tag">Rondas</div><p class="muted">Ronda ${G.round} en juego. Aquí verás quién gana cada ronda y cuántos puntos se lleva.</p></div>`;
   return `<div><div class="tag" style="margin-bottom:6px">Rondas jugadas</div><ul class="hist">${h.map(x=>
-    `<li><span>Ronda ${x.r}: ${x.w==null?'empate en el cierre':`<b>${x.w===me?'tú':esc(G.players[x.w].name)}</b> ${x.why==='cierre'?'(cierre)':'(dominó)'}`}</span><span class="g">${x.w==null?'0':'+'+x.pts}</span></li>`).join('')}</ul></div>`;
+    `<li><span>Ronda ${x.r}: ${x.w==null?'empate en el cierre':`<b>${isPairs(G)?teamLabel(x.w):(x.w===me?'tú':esc(G.players[x.w].name))}</b> ${x.why==='cierre'?'(cierre)':'(dominó)'}`}</span><span class="g">${x.w==null?'0':'+'+x.pts}</span></li>`).join('')}</ul></div>`;
 }
 function setDrawer(on){
   $('drawerBell').hidden=MODE!=='online';$('drawerBell').textContent=$('bellBtn').textContent;
@@ -1633,6 +1667,7 @@ function renderLobby(){
     <div class="tag">Partida online de ${need}</div>
     <div class="bigcode"><strong>${esc(L.code)}</strong><span class="need">${n} de ${need}</span></div>
     <p class="muted" style="margin:0">${n<need?`Faltan ${need-n}. La partida empezará sola cuando estéis todos.`:'¡Ya estáis todos!'}</p>
+    ${need===4?'<p class="muted" style="margin:0">Con 4 se juega por parejas: al empezar se sortean los sitios y tu compañero es quien queda enfrente.</p>':''}
     <a class="btn wa big" href="${waLink(L.code)}" target="_blank" rel="noopener">Invitar por WhatsApp</a>
     <div class="linkrow"><input type="text" id="linkIn" readonly value="${esc(shareLink(L.code))}" aria-label="Enlace de la partida"><button class="btn alt" type="button" id="copyLinkBtn">Copiar enlace</button></div>
     <div class="slots">${slots}</div>
