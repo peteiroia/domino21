@@ -982,7 +982,7 @@ function renderGame(){
       act='<button class="btn" type="button" id="reclaimBtn">Volver a jugar yo</button>';
     } else if(myTurn){
       if(sel!==null&&G.hands[me][sel]){
-        hint='Vale por los dos lados: toca en el campo la ficha del extremo donde quieres ponerla.';
+        hint='Vale por los dos lados: toca la flecha del lado donde quieres ponerla.';
       } else if(!playable.some(Boolean)){
         if(G.pool.length)hint='No tienes jugada: pulsa «¡A robar!», abajo a la derecha del campo.';
         else if(G.passes>=G.players.length-1){act='<button class="btn big cierre" type="button" id="passBtn">¡Cierre!</button>';hint='Nadie puede jugar: pulsa ¡Cierre! para cerrar la mesa y contar las fichas.'}
@@ -1439,6 +1439,22 @@ function svgTile(p,cls,attr=''){
   s+=pipsSvg(p.a,p.x,p.y,hz)+pipsSvg(p.b,hz?p.x+1:p.x,hz?p.y:p.y+1,hz);
   return s+'</g>';
 }
+function arrowMark(x,y,ang,side){
+  const a=ang*180/Math.PI;
+  return `<g data-end="${side}" class="tarrow" role="button" aria-label="Poner por este lado"><circle cx="${x.toFixed(3)}" cy="${y.toFixed(3)}" r=".55"/><path transform="translate(${x.toFixed(3)} ${y.toFixed(3)}) rotate(${a.toFixed(1)})" d="M-.18 -.28L.22 0L-.18 .28"/></g>`;
+}
+function endArrows(ps,last){
+  const byIdx=i=>ps.find(p=>p.idx===i);
+  const mk=(endI,nbI,side)=>{
+    const e=byIdx(endI),n=byIdx(nbI);if(!e||!n)return '';
+    const ex=e.x+e.w/2,ey=e.y+e.h/2;let dx=ex-(n.x+n.w/2),dy=ey-(n.y+n.h/2);
+    const horiz=e.a===e.b?Math.abs(dx)>=Math.abs(dy):e.w>e.h;
+    if(horiz){dx=Math.sign(dx)||1;dy=0}else{dy=Math.sign(dy)||1;dx=0}
+    const t=Math.min(Math.abs(dx)>1e-6?e.w/2/Math.abs(dx):1e9,Math.abs(dy)>1e-6?e.h/2/Math.abs(dy):1e9);
+    return arrowMark(ex+dx*(t+.75),ey+dy*(t+.75),Math.atan2(dy,dx),side);
+  };
+  return mk(0,1,'L')+mk(last,last-1,'R');
+}
 function arrowsSvg(p){
   const cy=p.y+p.h/2;
   const m=(x,side,d)=>`<g data-end="${side}" class="tarrow" role="button" aria-label="Poner por la ${side==='L'?'izquierda':'derecha'}"><circle cx="${x}" cy="${cy}" r=".55"/><path d="${d}"/></g>`;
@@ -1493,14 +1509,14 @@ function renderBoard(){
   const newIdx=G.lastSide==='R'?last:0;
   const anim=G.seq!==animSeq&&G.log&&G.log.k==='play'&&G.lastSide;
   animSeq=G.seq;
-  const pad=.4;
+  const pad=choosing?1.4:.4;
   let vb=`${-pad} ${minY-pad} ${W+2*pad} ${maxY-minY+2*pad}`;
   if(fit){const vw=fit.cw/fit.u,vh=fit.ch/fit.u;vb=`${(W/2-vw/2).toFixed(3)} ${((minY+maxY)/2-vh/2).toFixed(3)} ${vw.toFixed(3)} ${vh.toFixed(3)}`}
   el.innerHTML=`<svg viewBox="${vb}" role="img" aria-label="Mesa con ${G.chain.length} fichas">`+
     ps.map(p=>{
       const tL=choosing&&p.idx===0&&last>0,tR=choosing&&p.idx===last&&last>0;
       return svgTile(p,`${p.idx===0||p.idx===last?'end':''} ${anim&&p.idx===newIdx?'new':''} ${tL||tR?'target':''} ${p.idx===rivalIdx?'rival':''}`,tL?'data-end="L" role="button" aria-label="Poner por este lado"':tR?'data-end="R" role="button" aria-label="Poner por este lado"':'');
-    }).join('')+(choosing&&last===0?arrowsSvg(ps[0]):'')+'</svg>';
+    }).join('')+(choosing?(last===0?arrowsSvg(ps[0]):endArrows(ps,last)):'')+'</svg>';
   if(anim)flyIn(el,G.log.w);
 }
 addEventListener('resize',()=>{if(G&&!$('scrGame').hidden)renderBoard()});
