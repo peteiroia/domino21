@@ -588,7 +588,7 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 /* Marco dorado fino alrededor de toda la pantalla */
 html::after{content:"";position:fixed;z-index:90;pointer-events:none;
   top:env(safe-area-inset-top,0px);right:env(safe-area-inset-right,0px);bottom:env(safe-area-inset-bottom,0px);left:env(safe-area-inset-left,0px);
-  border:1.5px solid var(--gold);box-shadow:inset 0 0 0 1px rgba(242,193,78,.18),inset 0 0 18px rgba(226,171,69,.12)}
+  border:4.5px solid var(--gold);box-shadow:inset 0 0 0 1px rgba(255,236,170,.45),inset 0 0 22px rgba(226,171,69,.18),0 0 0 1px rgba(0,0,0,.3)}
 /* Última jugada: grande y centrada abajo del campo */
 #scrGame .log{display:none}
 .table.pitch .tinfo{display:grid!important;grid-template-columns:1fr auto 1fr;align-items:center;padding-right:8px!important;padding-left:10px;min-height:44px}
@@ -610,6 +610,15 @@ html::after{content:"";position:fixed;z-index:90;pointer-events:none;
 .sndbtn.off b{text-decoration:line-through;text-decoration-color:rgba(255,255,255,.6)}
 @media (orientation:landscape){.seatL{padding-top:34px}}
 @media (orientation:portrait){.seatT{padding-top:28px}}
+/* Todo el contenido queda dentro del marco dorado */
+.wrap{padding-left:max(20px,calc(env(safe-area-inset-left,0px) + 12px));padding-right:max(20px,calc(env(safe-area-inset-right,0px) + 12px));padding-block:20px 44px}
+@media (orientation:landscape){
+  .wrap.withside{padding-block:12px 12px;padding-left:max(14px,calc(env(safe-area-inset-left,0px) + 10px));padding-right:max(52px,calc(env(safe-area-inset-right,0px) + 44px))}
+  .table.pitch > .goalbtn{right:-34px;width:30px}
+}
+@media (orientation:landscape) and (min-height:541px){.table.pitch > .goalbtn{right:-38px;width:34px}}
+.drawer-tab{right:5px}
+@media (orientation:landscape){#scrGame .lg{--u:clamp(21px,6.2vh,38px)}#scrGame .hand{padding-bottom:6px}}
 .micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:18;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .micbtn .mic{width:10px;height:15px;border-radius:5px;background:var(--brass);box-shadow:0 0 0 2px rgba(226,171,69,.35)}
 .micbtn.rec{background:#d93b3b;border-color:#ff9a9a}
@@ -1241,7 +1250,7 @@ function oppHTML(w,side){
   const small=matchMedia('(orientation: landscape) and (max-height: 540px)').matches,portrait=!matchMedia('(orientation: landscape)').matches,tw=small?36:(portrait&&side!=='T'?30:45);
   const tb=$('table'),tW=(tb&&tb.clientWidth)||360,tH=(tb&&tb.clientHeight)||260;
   const portraitTop=side==='T'&&!matchMedia('(orientation: landscape)').matches;
-  const avail=side==='T'?(portraitTop?tW-24:tW-300):tH-(small?190:150);
+  const avail=side==='T'?(portraitTop?tW-24:tW-300):tH-(small?235:170);
   const step=Math.max(6,Math.min(tw+4,avail/Math.max(1,n)));
   const turn=G.turn===w&&!G.over&&G.phase!=='pick';
   const win=G.over&&sameTeam(G,G.over.winner,w);
