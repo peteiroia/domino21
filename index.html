@@ -1175,7 +1175,7 @@ function renderGame(){
     $('hand').innerHTML=handView().map(i=>{
       const t=G.hands[me][i],c=tc(t),f=flipped.has(c);
       const cls=sortMode?'sorting':(!myTurn?'':(playable[i]?'ok':'no'));
-      return `<button class="ht ${cls} ${sel===i&&!sortMode?'sel':''} ${G.hands[me].length===1&&!G.over?'lastone':''}" type="button" data-i="${i}" data-c="${c}" aria-label="Ficha ${t[0]} y ${t[1]}">${f?tileHTML(t[1],t[0],'v','lg'):tileHTML(t[0],t[1],'v','lg')}</button>`;
+      return `<button class="ht ${cls} ${sel===i&&!sortMode?'sel':''} ${G.hands[me].length===1&&!G.over&&G.phase!=='pick'?'lastone':''}" type="button" data-i="${i}" data-c="${c}" aria-label="Ficha ${t[0]} y ${t[1]}">${f?tileHTML(t[1],t[0],'v','lg'):tileHTML(t[0],t[1],'v','lg')}</button>`;
     }).join('');
     $('hand').classList.toggle('sortmode',sortMode);
     $('sortBtn').hidden=!!G.over||G.phase==='pick'||!G.hands[me].length;
@@ -1396,7 +1396,7 @@ function oppHTML(w,side){
   const turn=G.turn===w&&!G.over&&G.phase!=='pick';
   const win=G.over&&sameTeam(G,G.over.winner,w);
   const mate=isPairs(G)&&sameTeam(G,w,me);
-  return `<div class="opp ${side}${turn?' turn':''}${reveal?' shown':''}${win?' win':''}${mate?' mate':''}${n===1&&!reveal?' lastone':''}" aria-label="${nm}: ${n} fichas">
+  return `<div class="opp ${side}${turn?' turn':''}${reveal?' shown':''}${win?' win':''}${mate?' mate':''}${n===1&&!reveal&&G.phase!=='pick'?' lastone':''}" aria-label="${nm}: ${n} fichas">
     <span class="opill"><span class="onm">${nm}${mate?' <em>· pareja</em>':''}</span><span class="osc" data-score="${w}">${shownScore(w)}</span>${reveal?`<span class="oc">=${pipCount(G.hands[w])}</span>`:''}</span>
     <span class="ofan" style="--step:${step.toFixed(1)}px">${tiles}</span></div>`;
 }
