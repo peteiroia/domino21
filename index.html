@@ -743,6 +743,21 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 .opp.lastone .ofan > i{animation:spinY 1.1s linear infinite}
 .opp.L.lastone .ofan > i,.opp.R.lastone .ofan > i{animation:spinYr 1.1s linear infinite}
 @keyframes spinYr{from{transform:rotate(90deg)}to{transform:rotate(450deg)}}
+.actions#pickActs{justify-content:flex-end}
+.btn.autopick{background:linear-gradient(180deg,#f7d27a,#d99c33);color:#0a1f5c;padding:10px 18px}
+@media (orientation:landscape) and (max-height:540px){
+  #pickSheet .dcard,#drawSheet .dcard{padding:8px 12px;gap:4px;max-height:calc(100dvh - 12px);border-radius:16px}
+  #pickSheet .dhead h2,#drawSheet .dhead h2{font-size:17px}
+  #pickSheet .pickcount{font-size:16px}
+  #pickSheet p.muted,#drawSheet p.muted{font-size:11px}
+  #pickSheet .heap.big{width:min(100%,calc((100dvh - 120px) * 10 / 8))}
+  .dcard.wide:has(#pickHeap){display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto 1fr auto;column-gap:10px}
+  .dcard.wide:has(#pickHeap) .dhead,.dcard.wide:has(#pickHeap) #pickTxt{grid-column:1/-1}
+  .dcard.wide:has(#pickHeap) #pickHeap{grid-column:1;grid-row:3}
+  .dcard.wide:has(#pickHeap) #pickMine{grid-column:2;grid-row:3;flex-direction:column;flex-wrap:wrap;max-height:100%;align-content:flex-start;justify-content:flex-start;gap:3px}
+  .dcard.wide:has(#pickHeap) #pickActs{grid-column:1/-1;grid-row:4}
+  #pickSheet .btn{padding:6px 12px;font-size:12px}
+}
 .micbtn{position:fixed;left:max(12px,env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:22;display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(8,26,85,.75);color:#fff;font:800 13px var(--body);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 6px 16px rgba(0,0,0,.35)}
 .micbtn .mic{width:10px;height:15px;border-radius:5px;background:var(--brass);box-shadow:0 0 0 2px rgba(226,171,69,.35)}
 .micbtn.rec{background:#d93b3b;border-color:#ff9a9a}
@@ -1004,6 +1019,13 @@ function cpuPick(g){
   const w=need[rnd(need.length)];
   g.hands[w].push(g.pool.splice(rnd(g.pool.length),1)[0]);g.seq++;
   if(g.hands.every(h=>h.length>=PICK))finishPick(g);
+  return g;
+}
+function autoPick(g,who){
+  if(g.phase!=='pick'||who<0||!g.hands[who])return null;
+  const h=g.hands[who];if(h.length>=PICK)return null;
+  while(h.length<PICK&&g.pool.length)h.push(g.pool.splice(rnd(g.pool.length),1)[0]);
+  g.seq++;if(g.hands.every(x=>x.length>=PICK))finishPick(g);
   return g;
 }
 function autoFill(g){
@@ -1392,7 +1414,7 @@ function oppHTML(w,side){
   const tb=$('table'),tW=(tb&&tb.clientWidth)||360,tH=(tb&&tb.clientHeight)||260;
   const portraitTop=side==='T'&&!matchMedia('(orientation: landscape)').matches;
   const avail=side==='T'?(portraitTop?tW-24:tW-300):tH-(small?255:185);
-  const step=Math.max(6,Math.min(tw+4,avail/Math.max(1,n)));
+  const tl=Math.round(tw*1.75),step=side==='T'?Math.max(6,Math.min(tw+4,avail/Math.max(1,n))):Math.max(5,Math.min(tw*.75,(avail-tl)/Math.max(1,n-1)));
   const turn=G.turn===w&&!G.over&&G.phase!=='pick';
   const win=G.over&&sameTeam(G,G.over.winner,w);
   const mate=isPairs(G)&&sameTeam(G,w,me);
@@ -1466,7 +1488,7 @@ function renderPick(){
   heap.classList.toggle('mix',mixing);
   heap.innerHTML=heapButtons(G.pool,'data-pick',can,'Coger esta ficha');
   $('pickMine').innerHTML=me>=0?G.hands[me].map(t=>tileHTML(t[0],t[1],'v','sm')).join('')+'<span class="slotph"></span>'.repeat(need):'';
-  $('pickActs').innerHTML=MODE==='online'&&isHost()&&waiting.length&&!mixing?'<button class="btn alt" type="button" id="autofillBtn">Repartir las que faltan</button>':'';
+  $('pickActs').innerHTML=(MODE==='online'&&isHost()&&waiting.length&&!mixing&&!need?'<button class="btn alt" type="button" id="autofillBtn">Repartir las que faltan</button>':'')+(can?`<button class="btn autopick" type="button" id="autoPickBtn">Repartir mis fichas</button>`:'');
 }
 let drawShow=null,drawSeen=null;
 function bigHalf(n){return `<span class="tile v bighalf">${half(n,'v')}</span>`}
@@ -1812,6 +1834,7 @@ function gameAction(g,who,a){
     case 'pick':return pickTile(g,who,a.v);
     case 'cpupick':return cpuPick(g);
     case 'autofill':return autoFill(g);
+    case 'autopick':return autoPick(g,who);
     case 'cpu':if(g.over||g.phase==='pick'||!g.players[g.turn]?.cpu)return null;return cpuPlay(g);
     case 'next':if(!g.over||g.over.type==='game')return null;return deal(g);
     case 'sum':if(!g.over||g.sumDone)return null;g.sumDone=true;g.seq++;return g;
@@ -2087,7 +2110,7 @@ function docAction(d,from,a){
     }
     return null;
   }
-  if(d.status!=='playing'||(a.t!=='pick'&&a.t!=='cpupick'&&a.t!=='sum'&&a.t!=='next'&&a.seq!==d.seq))return null;
+  if(d.status!=='playing'||(a.t!=='pick'&&a.t!=='autopick'&&a.t!=='cpupick'&&a.t!=='sum'&&a.t!=='next'&&a.seq!==d.seq))return null;
   const hostOnly=['again','takeover','cpu','autofill','cpupick'];
   const g=dec(d),who=g.players.findIndex(p=>p.id===from);
   if(hostOnly.includes(a.t)?!host:who<0)return null;
@@ -2398,6 +2421,7 @@ document.addEventListener('click',e=>{
   if(b.classList.contains('ht')){if(sortMode)return;tapTile(+b.dataset.i);return}
   if(b.dataset.side&&sel!==null){play({t:'move',i:sel,side:b.dataset.side});return}
   if(b.id==='champClose'){hideChamp();return}
+  if(b.id==='autoPickBtn'){b.disabled=true;play({t:'autopick'});return}
   if(b.id==='sumBtn'){sumPoints();return}
   if(b.dataset.pick){if(G&&G.phase==='pick'&&me>=0&&G.hands[me].length<PICK){b.disabled=true;b.classList.add('taken');play({t:'pick',v:b.dataset.pick})}return}
   if(b.id==='hideDraw'){drawHidden=true;renderDraw();return}
