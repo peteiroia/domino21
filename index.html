@@ -1126,6 +1126,8 @@ function applyDraw(g,who,k){
 function cpuPlay(g){
   const w=g.turn; let drew=0; const drawn=[];
   while(!g.hands[w].some(t=>sidesFor(g,t).length)&&g.pool.length){const t=g.pool.splice(rnd(g.pool.length),1)[0];drawn.push(''+t[0]+t[1]);g.hands[w].push(t);drew++}
+  // Primero roba (se ve en el montón) y en el siguiente paso coloca la ficha
+  if(drawn.length){g.seq++;g.log={k:'draw',w,drawn};return g}
   const moves=[];
   g.hands[w].forEach((t,i)=>sidesFor(g,t).forEach(side=>{
     moves.push({i,side,wt:t[0]+t[1]+(t[0]===t[1]?3:0)+Math.random()});
@@ -1189,7 +1191,7 @@ function logText(){
   if(L.k==='redeal')return 'Nadie tiene ningún doble: se vuelven a revolver las fichas.';
   if(L.k==='start')return L.t[0]===6?`${label(w)} ${vb(w,'tienes','tiene')} el 6|6 y ${vb(w,'sales','sale')} con él.`:`Nadie tiene el 6|6. ${label(w)} ${vb(w,'tienes','tiene')} el doble más alto (${tStr(L.t)}) y ${vb(w,'sales','sale')} con él.`;
   if(L.k==='round')return `Ronda ${L.r}. ${label(w)} ${vb(w,'sales','sale')}.`;
-  if(L.k==='draw')return `${label(w)} ${vb(w,'robaste','robó')} ${w===me?'el '+tStr(L.t):'una ficha'}.`;
+  if(L.k==='draw')return L.drawn?`${label(w)} ${vb(w,'robaste','roba')} del montón.`:`${label(w)} ${vb(w,'robaste','robó')} ${w===me?'el '+tStr(L.t):'una ficha'}.`;
   const dr=L.drew?`${vb(w,'robaste','robó')} ${L.drew} y `:'';
   if(L.k==='pass')return `${label(w)} ${dr}${vb(w,'pasas','pasa')}: sin jugada.`;
   return `${label(w)} ${dr}${vb(w,'jugaste','jugó')} el ${tStr(L.t)}.`;
@@ -1469,7 +1471,8 @@ function watchDraws(){
   watchSeen=G.round+':'+G.seq;
   const L=G.log;if(!L||L.w==null||L.w===me||G.phase==='pick')return;
   let drawn=null;
-  if(L.k==='draw'&&L.t)drawn=[''+L.t[0]+L.t[1]];
+  if(L.k==='draw'&&L.drawn&&L.drawn.length)drawn=L.drawn.slice();
+  else if(L.k==='draw'&&L.t)drawn=[''+L.t[0]+L.t[1]];
   else if((L.k==='play'||L.k==='pass')&&L.drawn&&L.drawn.length)drawn=L.drawn.slice();
   if(!drawn)return;
   if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
@@ -1484,14 +1487,14 @@ function runWatch(){
   watchRunning=true;
   const name=job.w===me?'Tú':(G.players[job.w]?.name||'Rival');
   $('watchTitle').textContent=`Roba ${name}`;
-  $('watchTxt').textContent=`${name} no tiene jugada y elige ${job.drawn.length===1?'una ficha':job.drawn.length+' fichas'} para robar…`;
-  $('watchCount').textContent=`0 de ${job.drawn.length}`;
+  $('watchTxt').textContent=`${name} no tiene jugada y roba del montón…`;
+  $('watchCount').textContent='';
   const tiles=job.before.map(c=>[+c[0],+c[1]]);
   $('watchHeap').innerHTML=heapButtons(tiles,'data-watch',false,'Ficha boca abajo');
   $('watchSheet').hidden=false;
   job.drawn.forEach((c,i)=>{
     setTimeout(()=>{const el=$('watchHeap').querySelector(`[data-c="${c}"]`);if(el){el.classList.add('picked');clack(1)}},450+i*750);
-    setTimeout(()=>{const el=$('watchHeap').querySelector(`[data-c="${c}"]`);if(el)el.classList.add('gone');$('watchCount').textContent=`${i+1} de ${job.drawn.length}`},450+i*750+420);
+    setTimeout(()=>{const el=$('watchHeap').querySelector(`[data-c="${c}"]`);if(el)el.classList.add('gone')},450+i*750+420);
   });
   setTimeout(runWatch,450+job.drawn.length*750+450);
 }
