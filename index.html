@@ -3116,6 +3116,13 @@ details.rules b{color:var(--ink)}
 .compass .tslot.win .card{box-shadow:0 0 0 3px var(--brass),0 0 22px rgba(226,171,69,.7),0 6px 14px rgba(0,0,0,.45)}
 .compass .tslot.win > span{color:#10225e;background:var(--brass)}
 .compass .hint{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:0 30px}
+.trickrow{display:flex;align-items:center;justify-content:center;gap:clamp(6px,2vw,14px);min-height:calc(var(--tc)*1.85);flex-wrap:nowrap}
+.trickrow .tslot{display:grid;justify-items:center;gap:4px}
+.trickrow .tslot:nth-child(odd){transform:rotate(-2.5deg)}.trickrow .tslot:nth-child(even){transform:rotate(2.5deg) translateY(4px)}
+.trickrow .card{--cw:min(calc(var(--tc)*1.08),calc((100vw - 110px)/4.4))}
+.trickrow .tslot > span{font-size:11.5px;font-weight:800;color:var(--muted);max-width:82px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(0,0,0,.25);padding:0 7px;border-radius:999px}
+.trickrow .tslot.win .card{box-shadow:0 0 0 3px var(--brass),0 0 22px rgba(226,171,69,.7),0 6px 14px rgba(0,0,0,.45);transform:translateY(-6px)}
+.trickrow .tslot.win > span{color:#10225e;background:var(--brass)}
 .fly{animation:fly .45s cubic-bezier(.2,.8,.25,1)}
 @keyframes fly{from{transform:translate(var(--fx,0),var(--fy,120px)) rotate(-25deg) scale(.85);opacity:.2}}
 .hint{color:var(--muted);font-size:14px;text-align:center;margin:0;font-weight:600}
@@ -4199,9 +4206,9 @@ function feltHTML(animate){
     const deck=G.deck.length?`<div class="stack"><div class="deckbox">${cardHTML(G.vira)}${backHTML()}<span class="cnt">${G.deck.length}</span></div></div>`:'';
     const chips=`<span class="trump">${ICON[G.trump]}Triunfa ${SUIT_NAME[G.trump]}</span>${!G.deck.length?`<span class="trump" style="padding-right:5px">Triunfo ${cardHTML(G.vira,{attrs:'style="--cw:20px;border-radius:3px"'})}</span>`:''}${G.arrastre&&G.game==='tute'?'<span class="chip">Arrastre</span>':''}`;
     let slots='';
-    if(G.trick.length)slots=G.trick.map(t=>{const f=flyAttr(t.p,t.c);return `<div class="tslot p-${seatPos(t.p)} ${G.trickDone&&t.p===G.trickWin?'win':''}">${cardHTML(t.c,{cls:f.cls,attrs:`style="${f.st}"`})}<span>${label(t.p)}</span></div>`}).join('');
+    if(G.trick.length)slots=G.trick.map(t=>{const f=flyAttr(t.p,t.c);return `<div class="tslot ${G.trickDone&&t.p===G.trickWin?'win':''}">${cardHTML(t.c,{cls:f.cls,attrs:`style="${f.st}"`})}<span>${label(t.p)}</span></div>`}).join('');
     else if(G.phase==='play')slots=`<p class="hint">${G.turn===me?'Sales tú. Elige una carta.':`Sale ${label(G.turn)}.`}</p>`;
-    return `<div class="feltrow">${deck}<div class="chips">${chips}</div></div><div class="compass">${slots}</div>`;
+    return `<div class="feltrow">${deck}<div class="chips">${chips}</div></div><div class="trickrow">${slots}</div>`;
   }
   if(G.game==='escoba'){
     const myT=me>=0&&G.turn===me&&G.phase==='play';
