@@ -837,7 +837,11 @@ window.DeporBoard=(()=>{
   const URLS=window.DEPOR_BOARD_URLS||['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt','wss://test.mosquitto.org:8081/mqtt'];
   const ROOT='deporjuegos/v1/',MESAS=ROOT+'mesas/',FRESH=180000;
   const te=new TextEncoder(),td=new TextDecoder();
-  let ws=null,ok=false,buf=new Uint8Array(0),ui=0,tries=0,ping=null,retry=null,pid=1;
+  let ws=null,ok=false,buf=new Uint8Array(0),ui=0,tries=0,ping=null,retry=null,pid=1,lastRx=0,everOk=false;
+  const outbox=[],reco=new Set();
+  // Sesión persistente: el servidor guarda los mensajes mientras la pantalla está apagada
+  let cid;try{cid=sessionStorage.getItem('djcid')}catch(e){}
+  if(!cid){cid='dj'+Math.random().toString(36).slice(2,12);try{sessionStorage.setItem('djcid',cid)}catch(e){}}
   const items={},mine={},fns=new Set(),subs=new Map(),readyQ=[],psubs=new Map();
   const str=s=>{const b=te.encode(s);return [b.length>>8,b.length&255,...b]};
   const len=n=>{const o=[];do{let d=n%128;n=Math.floor(n/128);if(n>0)d|=128;o.push(d)}while(n>0);return o};
@@ -845,18 +849,22 @@ window.DeporBoard=(()=>{
   const send=p=>{try{if(ws&&ws.readyState===1&&ok||p[0]===0x10&&ws&&ws.readyState===1){ws.send(p);return true}}catch(e){}return false};
   const nextPid=()=>{pid=pid%65000+1;return [pid>>8,pid&255]};
   const pubRaw=(topic,bytes,retain)=>{const t=str(topic),b=new Uint8Array(t.length+bytes.length);b.set(t);b.set(bytes,t.length);return send(pkt(retain?0x31:0x30,b))};
-  const subscribeRaw=topic=>send(pkt(0x82,[...nextPid(),...str(topic),0]));
+  const pubQ1=(topic,bytes)=>{const t=str(topic),p=nextPid(),b=new Uint8Array(t.length+2+bytes.length);b.set(t);b.set(p,t.length);b.set(bytes,t.length+2);return send(pkt(0x32,b))};
+  const subscribeRaw=(topic,q)=>send(pkt(0x82,[...nextPid(),...str(topic),q?1:0]));
   const unsubscribeRaw=topic=>send(pkt(0xA2,[...nextPid(),...str(topic)]));
   const fire=()=>fns.forEach(f=>{try{f()}catch(e){}});
   function onPacket(t,b){
     const type=t>>4;
     if(type===2){
-      ok=true;tries=0;subscribeRaw(MESAS+'#');subs.forEach((_,k)=>subscribeRaw(k));psubs.forEach((_,k)=>subscribeRaw(k+'#'));
+      ok=true;tries=0;lastRx=Date.now();subscribeRaw(MESAS+'#');subs.forEach((_,k)=>subscribeRaw(k,1));psubs.forEach((_,k)=>subscribeRaw(k+'#'));
       for(const k in mine)pubRaw(k,te.encode(mine[k]),true);
-      readyQ.splice(0).forEach(f=>{try{f()}catch(e){}});fire();return;
+      const now=Date.now();outbox.splice(0).forEach(([tp,by,ts])=>{if(now-ts<180000)pubQ1(tp,by)});
+      readyQ.splice(0).forEach(f=>{try{f()}catch(e){}});fire();
+      if(everOk)setTimeout(()=>reco.forEach(f=>{try{f()}catch(e){}}),300);
+      everOk=true;return;
     }
     if(type===3){
-      const tl=(b[0]<<8)|b[1],topic=td.decode(b.subarray(2,2+tl));let i=2+tl;if(((t>>1)&3)>0)i+=2;
+      const tl=(b[0]<<8)|b[1],topic=td.decode(b.subarray(2,2+tl));let i=2+tl;if(((t>>1)&3)>0){send(new Uint8Array([0x40,2,b[i],b[i+1]]));i+=2}
       const body=td.decode(b.subarray(i));
       if(topic.startsWith(MESAS)){
         if(!body)delete items[topic];else{try{const o=JSON.parse(body);if(o&&typeof o==='object')items[topic]=o}catch(e){}}
@@ -875,7 +883,7 @@ window.DeporBoard=(()=>{
       let m=1,v=0,i=1,byte;
       do{if(i>=buf.length)return;byte=buf[i++];v+=(byte&127)*m;m*=128}while(byte&128);
       if(buf.length<i+v)return;
-      const t=buf[0],body=buf.slice(i,i+v);buf=buf.slice(i+v);onPacket(t,body);
+      const t=buf[0],body=buf.slice(i,i+v);buf=buf.slice(i+v);lastRx=Date.now();onPacket(t,body);
     }
   }
   function connect(){
@@ -886,16 +894,19 @@ window.DeporBoard=(()=>{
     const me=ws;
     const guard=setTimeout(()=>{if(me===ws&&!ok){try{me.close()}catch(e){}}},9000);
     ws.onopen=()=>{
-      const id='dj'+Math.random().toString(36).slice(2,12);
-      send(pkt(0x10,[...str('MQTT'),4,2,0,45,...str(id)]));
-      clearInterval(ping);ping=setInterval(()=>send(new Uint8Array([0xC0,0])),20000);
+      send(pkt(0x10,[...str('MQTT'),4,0,0,45,...str(cid)]));
+      clearInterval(ping);ping=setInterval(()=>{send(new Uint8Array([0xC0,0]));if(ok&&Date.now()-lastRx>50000)kick()},15000);
     };
     ws.onmessage=e=>{if(me===ws)onData(new Uint8Array(e.data))};
     ws.onclose=ws.onerror=()=>{if(me!==ws)return;clearTimeout(guard);ws=null;ok=false;clearInterval(ping);later()};
   }
-  function later(){clearTimeout(retry);tries++;ui++;retry=setTimeout(connect,Math.min(15000,800*tries))}
+  function later(){clearTimeout(retry);tries++;if(tries>2)ui++;retry=setTimeout(connect,Math.min(10000,600*tries))}
+  function kick(){const w=ws;ws=null;ok=false;clearInterval(ping);try{w&&w.close()}catch(e){}tries=0;connect()}
   setInterval(()=>{for(const k in mine){try{const o=JSON.parse(mine[k]);o.ts=Date.now();mine[k]=JSON.stringify(o);pubRaw(k,te.encode(mine[k]),true)}catch(e){}}},60000);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!ws)connect()});
+  const wake=()=>{if(document.hidden)return;if(!ws){tries=0;connect();return}
+    if(!ok||Date.now()-lastRx>20000){kick();return}
+    send(new Uint8Array([0xC0,0]));setTimeout(()=>reco.forEach(f=>{try{f()}catch(e){}}),200)};
+  document.addEventListener('visibilitychange',wake);addEventListener('pageshow',wake);addEventListener('focus',wake);addEventListener('online',()=>kick());
   connect();
   return {
     get ready(){return ok},
@@ -904,9 +915,10 @@ window.DeporBoard=(()=>{
     put(kind,code,o){const k=MESAS+kind+'/'+code;mine[k]=JSON.stringify({...o,code,ts:Date.now()});pubRaw(k,te.encode(mine[k]),true)},
     del(kind,code){const k=MESAS+kind+'/'+code;delete mine[k];delete items[k];pubRaw(k,new Uint8Array(0),true);fire()},
     on(f){fns.add(f)},
-    sub(topic,f){let s=subs.get(topic);if(!s){s=new Set();subs.set(topic,s);if(ok)subscribeRaw(topic)}s.add(f)},
+    sub(topic,f){let s=subs.get(topic);if(!s){s=new Set();subs.set(topic,s);if(ok)subscribeRaw(topic,1)}s.add(f)},
     unsub(topic,f){const s=subs.get(topic);if(!s)return;s.delete(f);if(!s.size){subs.delete(topic);if(ok)unsubscribeRaw(topic)}},
-    tx(topic,obj){return pubRaw(topic,te.encode(JSON.stringify(obj)),false)},
+    tx(topic,obj){const by=te.encode(JSON.stringify(obj));if(ok&&pubQ1(topic,by))return true;outbox.push([topic,by,Date.now()]);if(outbox.length>300)outbox.shift();return false},
+    onReconnect(f){reco.add(f)},
     keep(topic,obj){if(obj){mine[topic]=JSON.stringify(obj);pubRaw(topic,te.encode(mine[topic]),true)}else{delete mine[topic];pubRaw(topic,new Uint8Array(0),true)}},
     subPrefix(pre,f){let s=psubs.get(pre);if(!s){s=new Set();psubs.set(pre,s);if(ok)subscribeRaw(pre+'#')}s.add(f)},
     ROOT
@@ -933,7 +945,8 @@ window.DeporBoard=(()=>{
         this._tx(this.id,{k:'claim',nonce:this.nonce});
         this._ct=setTimeout(()=>{if(this.destroyed||this.open)return;this.open=true;this.emit('open',this.id)},1400);
       });
-      this._ka=setInterval(()=>{const now=Date.now();for(const c of Object.values(this.conns)){if(!c.open)continue;this._tx(c.peer,{k:'ping',cid:c.cid,from:this.id});if(now-c.last>32000)c._drop()}},8000);
+      this._ka=setInterval(()=>{const now=Date.now();for(const c of Object.values(this.conns)){if(!c.open)continue;this._tx(c.peer,{k:'ping',cid:c.cid,from:this.id});if(now-c.last>150000)c._drop()}},10000);
+      this._re=()=>{if(this.destroyed)return;for(const c of Object.values(this.conns))if(c.open&&c._out){c.last=Date.now();c.emit('open')}};B.onReconnect(this._re);
     }
     _tx(to,m){B.tx(PT+to,m)}
     _onMsg(m){
@@ -953,9 +966,9 @@ window.DeporBoard=(()=>{
       if(m.k==='close'){c._drop();return}
     }
     connect(remote){
-      const c=new Conn(this,String(remote),rid());this.conns[c.cid]=c;
+      const c=new Conn(this,String(remote),rid());c._out=true;this.conns[c.cid]=c;
       const go=()=>{if(this.destroyed)return;this._tx(c.peer,{k:'conn',from:this.id,cid:c.cid});
-        c._t=setTimeout(()=>{if(!c.open&&!c._gone){c._gone=true;delete this.conns[c.cid];const e=new Error('No hay nadie con ese código');e.type='peer-unavailable';this.emit('error',e)}},5000)};
+        c._t=setTimeout(()=>{if(!c.open&&!c._gone){c._gone=true;delete this.conns[c.cid];const e=new Error('No hay nadie con ese código');e.type='peer-unavailable';this.emit('error',e)}},9000)};
       if(this.open)go();else this.on('open',go);
       return c;
     }
@@ -2534,7 +2547,7 @@ function hostMissing(){
   if(!everConnected){failJoin('No hay ninguna partida abierta con el código '+code+'. Comprueba el código o pide a quien la creó que tenga la partida abierta.');return}
   probeFails++;guestSlot=1-guestSlot;
   if(G){onlineIds=hostOnlyOff();renderGame()}
-  if(probeFails>=2&&iShouldTakeOver()){takeOver();return}
+  if(probeFails>=8&&iShouldTakeOver()){takeOver();return}
   if(probeFails===6&&G==null){$('scrLobby').innerHTML=`<div class="tag">Partida ${esc(code)}</div><p class="muted">Buscando la partida… Si tu rival no tiene la app abierta, entrarás en cuanto la abra.</p><div class="actions" style="justify-content:flex-start"><button class="btn alt" type="button" id="leaveBtn">Salir</button></div>`}
   scheduleRetry(probeFails<4?400:2000);
 }
@@ -2542,7 +2555,7 @@ function iShouldTakeOver(){
   const d=guestDoc||savedHost(code);if(!d||d.status==='closed')return false;
   if(!fallbackHost&&d.status!=='playing')return false;
   if(d.host===myId)return true;            // yo era la mesa: la vuelvo a abrir
-  if(probeFails>=5)return true;            // nadie contesta en ningún sitio: sigo yo
+  if(probeFails>=10)return true;            // nadie contesta en ningún sitio: sigo yo
   const n=d.players.length,hi=d.players.findIndex(p=>p.id===d.host);
   const alive=onlineIds||d.players.map(p=>p.id);
   for(let k=1;k<=n;k++){const p=d.players[(hi+k)%n];if(p.cpu||p.id===d.host)continue;if(p.id===myId)return true;if(alive.includes(p.id))return false}
@@ -2558,7 +2571,7 @@ function connectToHost(){
   if(netRole!=='guest'||!peer||peer.destroyed)return;
   try{if(guestConn)guestConn.close()}catch(e){}
   const conn=guestConn=peer.connect(hostIdOf(code,guestSlot),{reliable:true});
-  const t0=setTimeout(()=>{if(conn===guestConn&&!conn.open){try{conn.close()}catch(e){}hostMissing()}},2500);
+  const t0=setTimeout(()=>{if(conn===guestConn&&!conn.open){try{conn.close()}catch(e){}hostMissing()}},10000);
   conn.on('open',()=>{clearTimeout(t0);if(conn!==guestConn)return;everConnected=true;lastHeard=Date.now();netStatus('');conn.send({t:'hello',id:myId,name:myName(),d:guestDoc||savedHost(code)})});
   conn.on('data',m=>{if(conn!==guestConn||!m)return;lastHeard=Date.now();silentHits=0;probeFails=0;
     if(m.t==='doc'){guestDoc=m.d;guestSlot=m.d.slot||0;store('d21host',JSON.stringify({code,doc:m.d}));onDoc(m.d)}
@@ -2580,10 +2593,10 @@ function scheduleRetry(ms){
 setInterval(()=>{
   if(netRole==='guest'&&guestConn&&guestConn.open){
     try{guestConn.send({t:'ping'})}catch(e){}
-    if(lastHeard&&Date.now()-lastHeard>6500){const c=guestConn;guestConn=null;try{c.close()}catch(e){}if(G){onlineIds=hostOnlyOff();renderGame()}silentHits++;lastHeard=0;
+    if(lastHeard&&Date.now()-lastHeard>30000){const c=guestConn;guestConn=null;try{c.close()}catch(e){}if(G){onlineIds=hostOnlyOff();renderGame()}silentHits++;lastHeard=0;
       if(silentHits>=2){silentHits=0;probeFails=Math.max(probeFails,1);hostMissing()}else scheduleRetry(200)}
   }
-  if(netRole==='host'){let ch=false;for(const c of hostConns.keys()){if(c._seen&&Date.now()-c._seen>10000){hostConns.delete(c);try{c.close()}catch(e){}ch=true}}if(ch)hostOnlineBroadcast();
+  if(netRole==='host'){let ch=false;for(const c of hostConns.keys()){if(c._seen&&Date.now()-c._seen>60000){hostConns.delete(c);try{c.close()}catch(e){}ch=true}}if(ch)hostOnlineBroadcast();
     // ¿Me he quedado solo en la mesa? Puede que el otro jugador siga la partida en el otro sitio: lo compruebo de vez en cuando
     const others=hostDoc&&hostDoc.status==='playing'&&hostDoc.players.some(p=>!p.cpu&&p.id!==myId);
     const open=[...hostConns.keys()].some(c=>c.open);
@@ -2598,7 +2611,7 @@ function probeOtherHost(){
   const other=1-(hostDoc.slot||0);
   let c;try{c=peer.connect(hostIdOf(code,other),{reliable:true})}catch(e){probing=false;return}
   const done=()=>{probing=false;try{c.close()}catch(e){}};
-  const t=setTimeout(done,2500);
+  const t=setTimeout(done,9000);
   c.on('open',()=>{try{c.send({t:'hostq',id:myId,seq:hostDoc.seq||0})}catch(e){}});
   c.on('data',m=>{
     if(!m||m.t!=='hosta')return;clearTimeout(t);done();
