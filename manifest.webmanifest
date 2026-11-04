@@ -1,7 +1,7 @@
 {
- "name": "Dominó del Dépor",
- "short_name": "Dominó Dépor",
- "description": "Dominó a 21 puntos online con amigos o contra la máquina.",
+ "name": "Juegos de mesa del Dépor",
+ "short_name": "Juegos Dépor",
+ "description": "Dominó, chinchón, tute, brisca y escoba online con amigos o contra la máquina.",
  "lang": "es",
  "start_url": "./",
  "scope": "./",
