@@ -838,7 +838,7 @@ window.DeporBoard=(()=>{
   const ROOT='deporjuegos/v1/',MESAS=ROOT+'mesas/',FRESH=180000;
   const te=new TextEncoder(),td=new TextDecoder();
   let ws=null,ok=false,buf=new Uint8Array(0),ui=0,tries=0,ping=null,retry=null,pid=1;
-  const items={},mine={},fns=new Set(),subs=new Map(),readyQ=[];
+  const items={},mine={},fns=new Set(),subs=new Map(),readyQ=[],psubs=new Map();
   const str=s=>{const b=te.encode(s);return [b.length>>8,b.length&255,...b]};
   const len=n=>{const o=[];do{let d=n%128;n=Math.floor(n/128);if(n>0)d|=128;o.push(d)}while(n>0);return o};
   const pkt=(h,body)=>{const L=len(body.length),a=new Uint8Array(1+L.length+body.length);a[0]=h;a.set(L,1);a.set(body,1+L.length);return a};
@@ -851,7 +851,7 @@ window.DeporBoard=(()=>{
   function onPacket(t,b){
     const type=t>>4;
     if(type===2){
-      ok=true;tries=0;subscribeRaw(MESAS+'#');subs.forEach((_,k)=>subscribeRaw(k));
+      ok=true;tries=0;subscribeRaw(MESAS+'#');subs.forEach((_,k)=>subscribeRaw(k));psubs.forEach((_,k)=>subscribeRaw(k+'#'));
       for(const k in mine)pubRaw(k,te.encode(mine[k]),true);
       readyQ.splice(0).forEach(f=>{try{f()}catch(e){}});fire();return;
     }
@@ -862,6 +862,7 @@ window.DeporBoard=(()=>{
         if(!body)delete items[topic];else{try{const o=JSON.parse(body);if(o&&typeof o==='object')items[topic]=o}catch(e){}}
         fire();return;
       }
+      for(const [pre,fs] of psubs)if(topic.startsWith(pre)){let o=null;if(body){try{o=JSON.parse(body)}catch(e){}}fs.forEach(f=>{try{f(topic.slice(pre.length),o)}catch(e){}});return}
       const set=subs.get(topic);if(!set||!body)return;
       let m;try{m=JSON.parse(body)}catch(e){return}
       set.forEach(f=>{try{f(m)}catch(e){}});
@@ -906,6 +907,8 @@ window.DeporBoard=(()=>{
     sub(topic,f){let s=subs.get(topic);if(!s){s=new Set();subs.set(topic,s);if(ok)subscribeRaw(topic)}s.add(f)},
     unsub(topic,f){const s=subs.get(topic);if(!s)return;s.delete(f);if(!s.size){subs.delete(topic);if(ok)unsubscribeRaw(topic)}},
     tx(topic,obj){return pubRaw(topic,te.encode(JSON.stringify(obj)),false)},
+    keep(topic,obj){if(obj){mine[topic]=JSON.stringify(obj);pubRaw(topic,te.encode(mine[topic]),true)}else{delete mine[topic];pubRaw(topic,new Uint8Array(0),true)}},
+    subPrefix(pre,f){let s=psubs.get(pre);if(!s){s=new Set();psubs.set(pre,s);if(ok)subscribeRaw(pre+'#')}s.add(f)},
     ROOT
   };
 })();
@@ -960,6 +963,62 @@ window.DeporBoard=(()=>{
     destroy(){if(this.destroyed)return;Object.values(this.conns).forEach(c=>c.close());this.destroyed=true;this.open=false;clearTimeout(this._ct);clearInterval(this._ka);B.unsub(PT+this.id,this._rx);this.emit('close')}
   }
   window.Peer=MPeer;
+})();
+
+/* Invitar a alguien escribiendo su nombre: presencia + aviso directo */
+window.DeporInvite=(()=>{
+  const B=window.DeporBoard,GT=B.ROOT+'gente/',IT=B.ROOT+'inv/';
+  const ls=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+  let id=ls('djid');if(!id){id='u'+Math.random().toString(36).slice(2,12);try{localStorage.setItem('djid',id)}catch(e){}}
+  const people={};let lastName='',pending=null;const fns=new Set();
+  const clean=s=>String(s||'').replace(/[<>&"']/g,'').trim().slice(0,14);
+  const norm=s=>clean(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+  const myName=()=>clean(ls('bdname')||ls('d21name')||'');
+  function presence(){const n=myName();lastName=n;if(n)B.keep(GT+id,{name:n,ts:Date.now()})}
+  B.subPrefix(GT,(k,o)=>{if(!o||k===id){if(!o)delete people[k];return}people[k]={id:k,name:clean(o.name),ts:+o.ts||0}});
+  B.whenReady(presence);
+  setInterval(()=>{if(myName()!==lastName||Date.now()%60000<20000)presence()},20000);
+  setInterval(presence,60000);
+  const GN={domino:'al dominó',chinchon:'al chinchón',tute:'al tute',brisca:'a la brisca',escoba:'a la escoba',poker:"al Texas Hold'em"};
+  /* --- Aviso al recibir una invitación --- */
+  let box=null;
+  function overlay(html){
+    if(!box){box=document.createElement('div');box.id='invBox';box.setAttribute('role','alertdialog');
+      box.style.cssText='position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:200;width:min(420px,calc(100% - 32px));box-sizing:border-box;background:linear-gradient(180deg,#1a46b5,#0c2468);color:#fff;border:1px solid #e2ab45;border-radius:18px;padding:14px 16px;box-shadow:0 18px 40px rgba(0,0,0,.5);font:15px Figtree,system-ui,sans-serif;display:grid;gap:10px';
+      document.body.appendChild(box)}
+    box.innerHTML=html;box.hidden=false;
+  }
+  const btn=(lbl,act,alt)=>`<button type="button" data-inv="${act}" style="font:800 14px Figtree,system-ui,sans-serif;border:0;border-radius:999px;padding:10px 18px;cursor:pointer;${alt?'background:rgba(255,255,255,.14);color:#fff':'background:#e2ab45;color:#10225e'}">${lbl}</button>`;
+  let cur=null;
+  B.sub(IT+id,m=>{
+    if(!m||typeof m!=='object')return;
+    if(m.k==='reply'){overlay(`<div><b>${clean(m.name)}</b> ${m.ok?'ha aceptado: ¡a jugar!':'no puede jugar ahora.'}</div><div style="display:flex;gap:8px;justify-content:flex-end">${btn('Vale','close')}</div>`);if(m.ok)setTimeout(()=>{if(box)box.hidden=true},2500);return}
+    if(m.k!=='invite'||!/^[A-Z]{4}$/.test(m.code||'')||!GN[m.game])return;
+    cur={code:m.code,game:m.game,from:clean(m.from),fromId:String(m.fromId||'').slice(0,20)};
+    overlay(`<div style="font-size:16px"><b>${cur.from}</b> te invita a jugar <b>${GN[cur.game]}</b>.</div><div style="display:flex;gap:8px;justify-content:flex-end">${btn('Ahora no','no',1)}${btn('Entrar','yes')}</div>`);
+    try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}
+    try{if('Notification' in window&&Notification.permission==='granted'&&document.hidden){const n=new Notification('Juegos de mesa del Dépor',{body:`${cur.from} te invita a jugar ${GN[cur.game]}`,tag:'dj-inv',icon:'icon-192.png'});n.onclick=()=>{window.focus();n.close()}}}catch(e){}
+    let t=0;const base=document.title;const iv=setInterval(()=>{document.title=(t++%2)?base:'¡Te invitan a jugar!';if(t>20||!box||box.hidden){clearInterval(iv);document.title=base}},900);
+  });
+  document.addEventListener('click',e=>{
+    const b=e.target.closest&&e.target.closest('[data-inv]');if(!b)return;
+    const a=b.dataset.inv;box.hidden=true;
+    if(a==='close'||!cur)return;
+    B.tx(IT+cur.fromId,{k:'reply',ok:a==='yes',name:myName()||'Tu rival'});
+    if(a==='yes'){const c=cur;cur=null;if(c.game==='domino'){window.__openDomino&&window.__openDomino(c.code)}else window.__cardsJoin&&window.__cardsJoin(c.code,c.game)}
+    else cur=null;
+  });
+  return {
+    id,
+    find(q){q=norm(q);if(q.length<2)return [];const now=Date.now();return Object.values(people).filter(p=>p.name&&now-p.ts<200000&&norm(p.name).includes(q)).sort((a,b)=>(norm(a.name)===q?-1:0)-(norm(b.name)===q?-1:0)).slice(0,6)},
+    setTarget(p){pending=p;try{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()}catch(e){}},
+    get pending(){return pending},
+    fire(kind,game,code){if(!pending||pending.kind!==kind)return false;const p=pending;pending=null;B.tx(IT+p.id,{k:'invite',game,code,from:myName()||'Alguien',fromId:id});return p},
+    presence,
+    boxHTML(kind){return `<div class="invwho" style="display:grid;gap:6px"><div class="tag">Jugar con alguien por su nombre</div><input type="text" id="whoIn" placeholder="Escribe su nombre" autocomplete="off" autocorrect="off" spellcheck="false" data-kind="${kind}" style="font:600 16px Figtree,system-ui,sans-serif"><div id="whoRes" style="display:grid;gap:6px"></div></div>`},
+    resHTML(q){const r=this.find(q);if(norm(q).length<2)return '<p class="muted" style="margin:0">Escribe al menos dos letras. Aparecerán quienes tengan la web abierta.</p>';
+      return r.length?r.map(p=>`<div class="avail"><div class="info"><b>${p.name}</b><span>Con la web abierta</span></div><button class="btn" type="button" data-invto="${p.id}" data-invname="${p.name}">Invitar</button></div>`).join(''):'<p class="muted" style="margin:0">Nadie con ese nombre tiene ahora la web abierta.</p>'}
+  };
 })();
 
 </script>
@@ -2189,6 +2248,7 @@ function renderOnlineBox(){
     <div class="seg" id="needSeg">${[2,3,4].map(n=>`<button type="button" data-need="${n}" aria-pressed="${n===needN}">${n}</button>`).join('')}</div>
     <button class="btn big" type="button" id="createBtn">Crear partida de ${needN}</button>
     ${gamesHTML()}
+    ${window.DeporInvite?window.DeporInvite.boxHTML('domino'):''}
     <div class="sub"><span class="muted">¿Te han pasado un código?</span><input type="text" id="codeIn" class="code-in" maxlength="4" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go"><button class="btn alt" type="button" id="joinBtn">Unirse</button></div>
     ${installHTML()}
     <p class="muted">Sin cuentas ni apps: tus amigos verán tu partida aquí o entrarán con el enlace. El móvil que crea la partida hace de mesa, así que debe tenerla abierta mientras jugáis.</p>
@@ -2198,6 +2258,7 @@ function renderOnlineBox(){
   box._html=html;box.innerHTML=html;
   if(keep)$('codeIn').value=keep;
   if(typing){const ni=$('codeIn');try{ni.focus({preventScroll:true});ni.setSelectionRange(caret,caret)}catch(e){}}
+  if($('whoIn')){const wq=box._who||'';$('whoIn').value=wq;$('whoRes').innerHTML=wq?window.DeporInvite.resHTML(wq):'';if(ae&&ae.id==='whoIn'){try{$('whoIn').focus({preventScroll:true})}catch(e){}}}
 }
 function gamesHTML(){
   const now=Date.now();
@@ -2218,7 +2279,10 @@ function usersHTML(){
 /* ---------- Tablón de partidas sin servidor: el primer móvil que abre el juego hace de tablón; si se va, otro toma el relevo ---------- */
 const lob={peer:null,role:null,conn:null,conns:new Set(),games:{},mine:null,timer:null,users:{},challenge:null};
 window.DeporBoard&&window.DeporBoard.on(()=>{try{lobbyRender()}catch(e){}});
-function lobbyRender(){if(!$('scrMenu').hidden&&document.activeElement?.id!=='codeIn')renderOnlineBox()}
+function lobbyRender(){if(!$('scrMenu').hidden&&!['codeIn','whoIn'].includes(document.activeElement?.id))renderOnlineBox()}
+document.addEventListener('input',e=>{if(e.target&&e.target.id==='whoIn'&&window.DeporInvite){$('onlineBox')._who=e.target.value;$('whoRes').innerHTML=window.DeporInvite.resHTML(e.target.value)}});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-invto]');if(!b||!window.DeporInvite||b.getRootNode()!==document)return;window.DeporInvite.setTarget({kind:'domino',id:b.dataset.invto,name:b.dataset.invname});createTable()},true);
+$('nameIn').addEventListener('change',()=>window.DeporInvite&&window.DeporInvite.presence());
 function lobbyRetry(ms){clearTimeout(lob.timer);lob.timer=setTimeout(lobbyStart,ms)}
 function lobbyReset(){try{lob.peer&&lob.peer.destroy()}catch(e){}lob.peer=null;lob.role=null;lob.conn=null;lob.conns=new Set()}
 function lobbyStart(){
@@ -2273,6 +2337,7 @@ function lobbySync(){
   if(lob.role==='reg'){if(prev&&(!want||prev.code!==want.code))delete lob.games[prev.code];if(want)lob.games[want.code]={...want,ts:Date.now(),owner:'self'};regBroadcast()}
   else if(lob.role==='cli'&&lob.conn&&lob.conn.open){try{if(want)lob.conn.send({t:'reg',g:want});else if(prev)lob.conn.send({t:'unreg',code:prev.code})}catch(e){}}
   if(want&&lob.challenge)sendInvite(want.code);
+  if(want&&window.DeporInvite&&window.DeporInvite.pending&&window.DeporInvite.pending.kind==='domino'){const p=window.DeporInvite.fire('domino','domino',want.code);if(p)$('menuErr').textContent=`Invitación enviada a ${p.name}. Cuando acepte, empezáis.`}
   presenceNow();
 }
 setInterval(()=>{if(lob.role==='cli'&&lob.conn&&lob.conn.open){try{lob.conn.send({t:'hello',u:meUser()});if(lob.mine)lob.conn.send({t:'reg',g:lob.mine})}catch(e){}}},20000);
@@ -3850,6 +3915,7 @@ function view(v,auto){
   try{scrollTo(0,0)}catch(e){}
 }
 window.__dview=(v)=>view(v,true);
+window.__openDomino=c=>{leftDomino=false;view('domino');try{const ni=document.getElementById('nameIn');if(ni&&!ni.value.trim())ni.value=load('bdname')||load('d21name')||'Jugador';window.joinTable&&window.joinTable(c)}catch(e){}};
 DOM.hidden=true;document.body.classList.add('nodom');
 
 /* ===== Dibujo de naipes ===== */
@@ -4292,6 +4358,8 @@ function boardSync(){
   const want=d&&d.status==='lobby'&&d.players.length<(d.need||4)?{host:(d.players.find(p=>p.id===d.host)||{}).name||'Anfitrión',n:d.players.length,need:d.need||4,game:d.game}:null;
   if(boardMine&&(!want||boardMine!==d.code))B.del('cartas',boardMine);
   if(want){B.put('cartas',d.code,want);boardMine=d.code}else boardMine=null;
+  const I=window.DeporInvite;
+  if(want&&I&&I.pending&&I.pending.kind==='cartas'){const p=I.fire('cartas',d.game,d.code);if(p)$('menuErr').textContent=`Invitación enviada a ${p.name}. Cuando acepte, empezáis.`}
 }
 function hostCast(){const m={t:'doc',d:HDOC};hConns.forEach((id,c)=>{try{if(c.open)c.send(m)}catch(e){}})}
 function hostOpen(c,cb){
@@ -4451,8 +4519,10 @@ function renderOnlineBox(){
     ${needN===4&&g.teams?'<p class="muted">A cuatro se juega por parejas, con tu compañero enfrente.</p>':''}
     <button class="btn big" type="button" id="createBtn">Crear mesa para ${needN}</button>
     ${listBlock}
+    ${NET==='peer'&&window.DeporInvite?window.DeporInvite.boxHTML('cartas'):''}
     <div class="sub"><span class="muted">¿Te han pasado un código?</span><input type="text" id="codeIn" class="code-in" maxlength="4" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go"><button class="btn alt" type="button" id="joinBtn">Unirse</button></div>
   </div>`;
+  const wq=box._who||'';if($('whoIn')){$('whoIn').value=wq;$('whoRes').innerHTML=wq?window.DeporInvite.resHTML(wq):''}
   if(keep)$('codeIn').value=keep;
   if(typing){const ni=$('codeIn');try{ni.focus({preventScroll:true});ni.setSelectionRange(caret,caret)}catch(e){}}
 }
@@ -4577,6 +4647,7 @@ ROOT.addEventListener('click',e=>{
   if(b.dataset.need){needN=+b.dataset.need;renderOnlineBox();return}
   if(b.dataset.tab){setTab(b.dataset.tab);return}
   if(b.dataset.code){joinTable(b.dataset.code);return}
+  if(b.dataset.invto){window.DeporInvite.setTarget({kind:'cartas',id:b.dataset.invto,name:b.dataset.invname});createTable();return}
   if(b.dataset.t){tapTable(b.dataset.t);return}
   if(b.dataset.c){if(dragJust)return;tapCard(b.dataset.c);return}
   if(b.dataset.cantar){move({t:'cantar',s:b.dataset.cantar});return}
@@ -4611,8 +4682,10 @@ ROOT.addEventListener('click',e=>{
       if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>{b.textContent='Copiado'},fb);else fb();break}
   }
 });
+ROOT.addEventListener('input',e=>{if(e.target.id==='whoIn'){const q=e.target.value;$('onlineBox')._who=q;$('whoRes').innerHTML=window.DeporInvite.resHTML(q)}});
 ROOT.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='codeIn')joinTable(e.target.value)});
-$('nameIn').addEventListener('change',()=>store('bdname',$('nameIn').value.trim()));
+$('nameIn').addEventListener('change',()=>{store('bdname',$('nameIn').value.trim());window.DeporInvite&&window.DeporInvite.presence()});
+window.__cardsJoin=(c,game)=>{if(GAMES[game])pickGame=game;view('cartas');show('menu');setTab('online');joinTable(c)};
 {const hb=$('hand');hb.addEventListener('pointerdown',handDown);hb.addEventListener('pointermove',handMove,{passive:false});hb.addEventListener('pointerup',handUp);hb.addEventListener('pointercancel',()=>{if(drag){clearTimeout(drag.t);drag.el.classList.remove('dragging');drag.el.style.removeProperty('--dx');drag=null}});hb.addEventListener('contextmenu',e=>e.preventDefault())}
 addEventListener('resize',()=>{if(G&&VIEW==='cartas'&&!$('scrGame').hidden)layoutHand()});
 document.getElementById('hubBtn')?.addEventListener('click',()=>{leftDomino=true;view('hub')});
