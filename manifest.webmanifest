@@ -1,7 +1,7 @@
 {
  "name": "Juegos de mesa del Dépor",
  "short_name": "Juegos Dépor",
- "description": "Dominó, chinchón, tute, brisca y escoba online con amigos o contra la máquina.",
+ "description": "Dominó, chinchón, tute, brisca, escoba y Texas Hold'em online con amigos o contra la máquina.",
  "lang": "es",
  "start_url": "./",
  "scope": "./",

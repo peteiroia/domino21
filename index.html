@@ -2968,6 +2968,19 @@ input::placeholder{color:rgba(199,212,245,.6)}
 .card .fig{position:absolute;inset:15% 13% 12%;border-radius:calc(var(--cw)*.06);background:radial-gradient(120% 90% at 50% 35%,#fffdf6,var(--st));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--sc) 30%,transparent);overflow:hidden}
 .card .fig .figsv{position:absolute;left:50%;bottom:0;height:100%;width:auto;transform:translateX(-50%);filter:drop-shadow(0 1px 1px rgba(0,0,0,.18))}
 button.card{cursor:pointer}
+.card.pk{--sc:#14245e;--st:#e4e9f7}.card.pk.red{--sc:#c8372c;--st:#fbe1dc}
+.card.pk .cr svg{fill:var(--sc)}
+.card .pkc{position:absolute;inset:24% 20%;display:grid;place-items:center}
+.card .pkc svg{width:78%;height:auto;fill:var(--sc);filter:drop-shadow(0 1px 1px rgba(0,0,0,.2))}
+.card .pkc.ace svg{width:96%}
+.card .pkf{position:absolute;inset:15% 13% 12%;border-radius:calc(var(--cw)*.06);background:radial-gradient(120% 90% at 50% 35%,#fffdf6,var(--st));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--sc) 30%,transparent);display:grid;place-items:center;align-content:center;overflow:hidden}
+.card .pkf i{position:absolute;inset:8%;background:var(--wm) center/contain no-repeat;opacity:.22}
+.card .pkf b{position:relative;font:700 calc(var(--cw)*.42) var(--display);color:var(--sc);line-height:1}
+.card .pkf .ps{position:relative;width:34%;height:auto;fill:var(--sc)}
+.pkboard .card,.pkboard .pkslot{--cw:min(var(--tc),calc((100vw - 90px)/5.4))}
+.table.pkboard{flex-wrap:nowrap;gap:6px}
+.ofan em.allin{color:#10225e;background:var(--brass);border-radius:999px;padding:0 6px}
+.ofan em.betc{color:#10225e;background:#f6e2b0;border-radius:999px;padding:0 6px}
 .back{--cw:62px;width:var(--cw);aspect-ratio:2/3;flex:none;position:relative;border-radius:calc(var(--cw)*.11);
   background:#0b33b6 var(--crest) center/cover;border:max(1.5px,calc(var(--cw)*.035)) solid var(--brass);
   box-shadow:inset 0 0 0 max(1px,calc(var(--cw)*.02)) rgba(255,255,255,.75),0 4px 10px rgba(3,10,40,.45)}
@@ -3934,7 +3947,20 @@ function figSVG(r,s){
 }
 const PIPS={2:[[50,20],[50,80]],3:[[50,15],[50,50],[50,85]],4:[[27,20],[73,20],[27,80],[73,80]],5:[[27,18],[73,18],[50,50],[27,82],[73,82]],6:[[27,15],[73,15],[27,50],[73,50],[27,85],[73,85]],7:[[27,13],[73,13],[50,31.5],[27,50],[73,50],[27,87],[73,87]]};
 const PINS={o:[],c:[46],e:[36,56],b:[28,46,64]};
+const PSYM={
+  H:'<svg viewBox="0 0 24 24"><path d="M12 21.2S3.6 16 1.9 10.6C.8 7 3 3.6 6.5 3.6c2.3 0 4 1.4 5.5 3.4 1.5-2 3.2-3.4 5.5-3.4 3.5 0 5.7 3.4 4.6 7C20.4 16 12 21.2 12 21.2Z"/></svg>',
+  D:'<svg viewBox="0 0 24 24"><path d="M12 1.6 20.6 12 12 22.4 3.4 12Z"/></svg>',
+  C:'<svg viewBox="0 0 24 24"><circle cx="12" cy="6.8" r="4.6"/><circle cx="6.6" cy="13.2" r="4.6"/><circle cx="17.4" cy="13.2" r="4.6"/><path d="M10.6 12.6h2.8l1.8 9H8.8Z"/></svg>',
+  S:'<svg viewBox="0 0 24 24"><path d="M12 1.6s8.6 6.4 8.6 11.6c0 2.9-2.3 4.8-4.8 4.8-1.5 0-2.7-.6-3.3-1.5.3 2.1 1.3 3.8 2.8 5.3H8.7c1.5-1.5 2.5-3.2 2.8-5.3-.6.9-1.8 1.5-3.3 1.5-2.5 0-4.8-1.9-4.8-4.8C3.4 8 12 1.6 12 1.6Z"/></svg>'};
+const PLAB={11:'J',12:'Q',13:'K',14:'A'};
+function frenchHTML(c,{tag='div',cls='',attrs=''}={}){
+  const s=S(c),r=R(c),lab=PLAB[r]||String(r),red=s==='H'||s==='D';
+  const corner=b=>`<span class="cr${b}"><b>${lab}</b>${PSYM[s]}</span>`;
+  const mid=r>=11&&r<=13?`<div class="pkf"><i></i><b>${lab}</b>${PSYM[s].replace('<svg ','<svg class="ps" ')}</div>`:`<div class="pkc${r===14?' ace':''}">${PSYM[s]}</div>`;
+  return `<${tag} class="card pk ${red?'red':''} ${cls}" ${tag==='button'?'type="button"':''} ${attrs} aria-label="${pokerName(c)}">${corner('')}${corner(' b')}${mid}</${tag}>`;
+}
 function cardHTML(c,{tag='div',cls='',attrs=''}={}){
+  if('HDCS'.includes(c[0]))return frenchHTML(c,{tag,cls,attrs});
   const s=S(c),r=R(c);
   let mid;
   if(r===1)mid=s==='o'?'<div class="ace"><div class="coin"><i></i></div></div>':`<div class="ace">${ICON[s]}</div>`;
@@ -3979,14 +4005,14 @@ function show(scr){
 }
 
 /* ---------- Menú principal ---------- */
-const ART={chinchon:['o3','o4','o5'],tute:['c11','c12','X'],brisca:['o1','e3','X'],escoba:['o7','b5','c3']};
+const ART={poker:['S14','H14','X'],chinchon:['o3','o4','o5'],tute:['c11','c12','X'],brisca:['o1','e3','X'],escoba:['o7','b5','c3']};
 const HUBTXT={
   domino:'Las 28 fichas de siempre con el escudo. Partidas a 21 puntos.',
-  chinchon:GAMES.chinchon.blurb,tute:GAMES.tute.blurb,brisca:GAMES.brisca.blurb,escoba:GAMES.escoba.blurb
+  poker:GAMES.poker.blurb,chinchon:GAMES.chinchon.blurb,tute:GAMES.tute.blurb,brisca:GAMES.brisca.blurb,escoba:GAMES.escoba.blurb
 };
 function renderHub(){
-  const tile=(k,name,art,wide)=>`<button type="button" class="tile${wide?' wide':''}" data-open="${k}"><div class="art">${art}</div><div class="txt"><b>${name}</b><span>${HUBTXT[k]}</span><span class="meta">${k==='domino'?'Fichas':'Baraja española'} · 2 a 4</span></div></button>`;
-  $('hubGrid').innerHTML=tile('domino','Dominó',domSVG(),true)+['chinchon','tute','brisca','escoba'].map(k=>tile(k,GAMES[k].name,`<div class="fan">${fanHTML(ART[k])}</div>`)).join('');
+  const tile=(k,name,art,wide)=>`<button type="button" class="tile${wide?' wide':''}" data-open="${k}"><div class="art">${art}</div><div class="txt"><b>${name}</b><span>${HUBTXT[k]}</span><span class="meta">${k==='domino'?'Fichas · 2 a 4':k==='poker'?'Baraja francesa · 2 a 6':'Baraja española · 2 a 4'}</span></div></button>`;
+  $('hubGrid').innerHTML=tile('domino','Dominó',domSVG(),true)+['chinchon','tute','brisca','escoba','poker'].map(k=>tile(k,GAMES[k].name,`<div class="fan">${fanHTML(ART[k])}</div>`)).join('');
 }
 function openGame(k){
   if(k==='domino'){leftDomino=false;view('domino');return}
@@ -3998,6 +4024,9 @@ function openGame(k){
 
 /* ---------- Menú de cada juego ---------- */
 const RULES={
+  poker:`<p>Cada jugador empieza con <b>1.000 fichas</b>. Recibes <b>2 cartas</b> tuyas y en la mesa salen <b>5 comunes</b>: el flop (3), el turn (1) y el river (1). Gana la mejor jugada de 5 cartas.</p>
+    <p>Antes de repartir se ponen las <b>ciegas</b> (pequeña y grande), que suben cada 6 manos. En tu turno puedes <b>retirarte</b>, <b>pasar</b> o <b>igualar</b>, y <b>subir</b> o ir <b>all-in</b>.</p>
+    <p>De mayor a menor: escalera de color, póker, full, color, escalera, trío, doble pareja, pareja y carta alta. Quien se queda sin fichas queda fuera; gana quien se lleva todas.</p>`,
   chinchon:`<p>Se reparten <b>7 cartas</b> a cada jugador y se levanta una al descarte. En tu turno <b>robas</b> (del mazo o la de arriba del descarte) y <b>tiras</b> una.</p>
     <p>Hay que ligar <b>tríos o cuatros</b> del mismo número, o <b>escaleras</b> de tres o más del mismo palo (el 7 enlaza con la sota). Las cartas ligadas salen subrayadas en dorado.</p>
     <p>Puedes <b>cerrar</b> al tirar cuando tienes <b>6 cartas ligadas y solo una suelta</b>. Cada uno suma sus cartas sueltas (figuras valen 10). Cerrar con todo ligado resta <b>10</b>. Quien llegue a <b>101</b> queda eliminado; el último en pie gana. Una escalera de 7 del mismo palo es <b>chinchón</b> y gana la partida de golpe.</p>`,
@@ -4069,7 +4098,7 @@ function schedule(){
   }
   const p=G.players[G.turn];
   if(p&&p.cpu){
-    timer=setTimeout(()=>act(g=>{if(g.seq!==seq||!g.players[g.turn]?.cpu)return null;const a=ENG[g.game].cpu(g);return applyAction(g,g.turn,a)?g:null},true),host?(G.game==='chinchon'?(G.step==='discard'?2000:1500):1000):6000);
+    timer=setTimeout(()=>act(g=>{if(g.seq!==seq||!g.players[g.turn]?.cpu)return null;const a=ENG[g.game].cpu(g);return applyAction(g,g.turn,a)?g:null},true),host?(G.game==='chinchon'?(G.step==='discard'?2000:1500):G.game==='poker'?1300:1000):6000);
   }
 }
 
@@ -4079,11 +4108,13 @@ function seatPos(w){
   if(k===0)return 'bottom';
   if(n===2)return 'top';
   if(n===3)return k===1?'right':'left';
+  if(n>4)return k===1?'right':k===n-1?'left':'top';
   return ['','right','top','left'][k];
 }
 const FLY={bottom:['0px','150px'],top:['0px','-150px'],left:['-150px','0px'],right:['150px','0px']};
 const ORDER={left:0,top:1,right:2};
 function scoreOf(t){
+  if(G.game==='poker')return `${G.chips[t]} fichas`;
   const v=G.score[t];
   if(G.game==='brisca'||G.game==='tute')return `${v} pto${v===1?'':'s'}`;
   return `${v} pto${v===1?'':'s'}`;
@@ -4092,14 +4123,24 @@ function renderGame(){
   if(!G)return;
   const n=G.players.length,info=GAMES[G.game];
   $('cTitle').textContent=info.name;
-  $('cSub').textContent=`Ronda ${G.round} · ${G.game==='chinchon'?'fuera al llegar a 101':G.game==='escoba'?'a 21 puntos':'a 8 puntos'}${MODE==='online'?` · Mesa ${code}`:''}`;
+  $('cSub').textContent=G.game==='poker'?`Mano ${G.round} · ciegas ${G.sb}/${G.bb}${MODE==='online'?` · Mesa ${code}`:''}`:`Ronda ${G.round} · ${G.game==='chinchon'?'fuera al llegar a 101':G.game==='escoba'?'a 21 puntos':'a 8 puntos'}${MODE==='online'?` · Mesa ${code}`:''}`;
   const myT=me>=0?teamOf(G,me):-1;
-  $('cScore').innerHTML=Array.from({length:nTeams(G)},(_,t)=>`<span class="${t===myT?'me':''}">${esc(isTeams(G)?(t===myT?'Vosotros':'Ellos'):(t===me?'Tú':G.players[t].name))}: ${G.score[t]}</span>`).join('');
+  $('cScore').innerHTML=G.game==='poker'?`<span class="me">Bote: ${pkPot(G)}</span>${G.street>0&&G.phase==='play'?`<span>${['','Flop','Turn','River'][G.street]}</span>`:''}`:Array.from({length:nTeams(G)},(_,t)=>`<span class="${t===myT?'me':''}">${esc(isTeams(G)?(t===myT?'Vosotros':'Ellos'):(t===me?'Tú':G.players[t].name))}: ${G.score[t]}</span>`).join('');
   const others=G.players.map((p,i)=>i).filter(i=>i!==me).sort((a,b)=>ORDER[seatPos(a)]-ORDER[seatPos(b)]);
   $('opps').innerHTML=others.map(w=>{
     const p=G.players[w],cnt=(G.hands[w]||[]).length;
     const partner=isTeams(G)&&me>=0&&teamOf(G,w)===teamOf(G,me);
     const out=G.game==='chinchon'&&G.out[w];
+    if(G.game==='poker'){
+      const gone=!G.inHand[w],fold=G.folded[w],allin=G.inHand[w]&&!fold&&G.chips[w]===0;
+      const tags=(w===G.dealer?'<span class="pair">D</span>':'');
+      const cards=gone?'<em>Eliminado</em>':fold?'<em>Se retiró</em>':backHTML()+backHTML();
+      return `<div class="seat ${G.turn===w&&G.phase==='play'?'turn':''} ${gone||fold?'out':''}">
+        <span class="av ${p.cpu?'cpu':''}">${esc(initials(p.name))}</span>
+        <span class="nm">${esc(p.name)}${tags}</span>
+        <div class="ofan">${cards}<em>${G.chips[w]}</em>${allin?'<em class="allin">All-in</em>':''}${G.bet[w]?`<em class="betc">${G.bet[w]}</em>`:''}</div>
+      </div>`;
+    }
     return `<div class="seat ${G.turn===w&&G.phase==='play'?'turn':''} ${out?'out':''}">
       <span class="av ${p.cpu?'cpu':''}">${esc(initials(p.name))}</span>
       <span class="nm">${esc(p.name)}${partner?'<span class="pair">Pareja</span>':''}</span>
@@ -4112,14 +4153,22 @@ function renderGame(){
   if(me>=0){
     const p=G.players[me];
     const mine=G.game==='chinchon'&&G.hands[me]?solve(G.hands[me],true):null;
+    const pkInfo=G.game==='poker'&&G.hands[me]&&G.hands[me].length?`<span>· ${G.board.length?handLabel(evalHand([...G.hands[me],...G.board])):'Tus cartas'}</span>${G.bet[me]?`<span>· apuestas ${G.bet[me]}</span>`:''}${me===G.dealer?'<span class="pill" style="background:#fff">D</span>':''}`:'';
     $('meBar').className='mebar'+(myTurn?' turn':'');
-    $('meBar').innerHTML=`<span class="av">${esc(initials(p.name))}</span><b>${esc(p.name)}</b><span>${scoreOf(teamOf(G,me))}${isTeams(G)?' en pareja':''}</span>${G.game==='escoba'&&G.escobas[me]?`<span>· ${G.escobas[me]} escoba${G.escobas[me]>1?'s':''}</span>`:''}${mine&&!G.out[me]?`<span>· ${mine.loose.length} suelta${mine.loose.length===1?'':'s'}</span>`:''}${myTurn?'<span class="pill">Tu turno</span>':''}`;
+    $('meBar').innerHTML=`<span class="av">${esc(initials(p.name))}</span><b>${esc(p.name)}</b><span>${scoreOf(teamOf(G,me))}${isTeams(G)?' en pareja':''}</span>${G.game==='escoba'&&G.escobas[me]?`<span>· ${G.escobas[me]} escoba${G.escobas[me]>1?'s':''}</span>`:''}${mine&&!G.out[me]?`<span>· ${mine.loose.length} suelta${mine.loose.length===1?'':'s'}</span>`:''}${pkInfo}${myTurn?'<span class="pill">Tu turno</span>':''}`;
   }else $('meBar').innerHTML='<span>Estás mirando esta partida.</span>';
   renderHand(myTurn);
   renderActs(myTurn);
   if(G.phase==='end'&&G.summary){if($('champBox').hidden)showSummary()}else $('roundBox').hidden=true;
 }
+function pokerFelt(animate){
+  const slots=[0,1,2,3,4].map(i=>G.board[i]?cardHTML(G.board[i],{cls:animate&&i>=(G.boardShown||0)?'fresh':''}):'<div class="emptyp pkslot"></div>').join('');
+  G.boardShown=G.board.length;
+  const toCall=me>=0&&G.phase==='play'?G.cur-G.bet[me]:0;
+  return `<div class="table pkboard">${slots}</div><div class="chips"><span class="trump">Bote: ${pkPot(G)}</span>${G.cur?`<span class="chip">Apuesta: ${G.cur}</span>`:''}${toCall>0&&G.turn===me?`<span class="chip" style="background:rgba(226,171,69,.4)">Para igualar: ${Math.min(toCall,G.chips[me])}</span>`:''}</div>${G.phase==='play'?`<p class="hint">${G.turn===me?'Te toca.':`Juega ${label(G.turn)}…`}</p>`:''}`;
+}
 function feltHTML(animate){
+  if(G.game==='poker')return pokerFelt(animate);
   const flyAttr=(p,c)=>{if(!animate||!G.last||G.last.c!==c||G.last.p!==p)return {cls:'',st:''};const [x,y]=FLY[seatPos(p)];return {cls:'fly',st:`--fx:${x};--fy:${y}`}};
   if(G.game==='brisca'||G.game==='tute'){
     const deck=G.deck.length?`<div class="stack"><div class="deckbox">${cardHTML(G.vira)}${backHTML()}<span class="cnt">${G.deck.length}</span></div></div>`:'';
@@ -4151,7 +4200,7 @@ function feltHTML(animate){
   </div>${G.phase==='play'?`<p class="hint">${myDraw?'Roba del mazo o coge el descarte.':G.turn===me?'Elige qué carta tirar.':rd?`${label(rd.p)} ${rd.draw==='disc'?'coge la carta del descarte':'roba del mazo'}…`:`Juega ${label(G.turn)}.`}</p>`:''}`;
 }
 function playableSet(myTurn){
-  if(!myTurn||me<0)return new Set();
+  if(!myTurn||me<0||G.game==='poker')return new Set();
   if(G.game==='brisca'||G.game==='tute')return G.trickDone?new Set():new Set(trickLegal(G,me));
   if(G.game==='escoba')return new Set(G.hands[me]);
   if(G.step==='discard')return new Set(G.hands[me].filter(c=>c!==G.took||G.hands[me].length===1));
@@ -4169,7 +4218,7 @@ function renderHand(myTurn){
   prevHand=cur.slice();
   const h=orderedHand(G.hands[me]);let lig=new Set();
   if(G.game==='chinchon'&&h.length)lig=new Set(solve(h,true).melds.flat());
-  const ok=playableSet(myTurn),dim=myTurn&&!(G.game==='chinchon'&&G.step==='draw');
+  const ok=playableSet(myTurn),dim=myTurn&&G.game!=='poker'&&!(G.game==='chinchon'&&G.step==='draw');
   box.innerHTML=h.map((c,i)=>cardHTML(c,{tag:'button',cls:[ok.has(c)?'ok':(dim?'no':''),sel===c?'sel':'',lig.has(c)?'lig':'',fresh.has(c)?'took':'',deal?'deal':''].join(' '),attrs:`data-c="${c}" style="--d:${i*70}ms"`})).join('');
   layoutHand();
 }
@@ -4220,8 +4269,25 @@ function layoutHand(){
   const mid=(k-1)/2,spread=Math.min(4,20/Math.max(k,1));
   cards.forEach((el,i)=>{const d=mid?(i-mid)/mid:0;el.style.setProperty('--r',((i-mid)*spread).toFixed(2)+'deg');el.style.setProperty('--y',(d*d*9).toFixed(1)+'px');el.style.zIndex=i+1});
 }
+function pokerActs(myTurn){
+  if(!myTurn)return '';
+  const toCall=G.cur-G.bet[me],stack=G.chips[me],maxTo=G.bet[me]+stack,pot=pkPot(G);
+  let h='';
+  if(toCall>0)h+=`<button class="btn alt" type="button" data-pk="fold">Retirarse</button>`;
+  h+=`<button class="btn" type="button" data-pk="call">${toCall<=0?'Pasar':toCall>=stack?`Igualar all-in (${stack})`:`Igualar ${toCall}`}</button>`;
+  if(maxTo>G.cur){
+    const minTo=Math.min(maxTo,G.cur+G.minRaise),seen=new Set();
+    const opts=[[minTo,G.cur?`Subir a ${minTo}`:`Apostar ${minTo}`],[G.cur+Math.round((pot+toCall)/2/G.bb)*G.bb,'½ bote'],[G.cur+Math.round((pot+toCall)/G.bb)*G.bb,'Bote']];
+    for(const [to,l] of opts){if(to>=minTo&&to<maxTo&&!seen.has(to)){seen.add(to);h+=`<button class="btn alt" type="button" data-pk="raise" data-to="${to}">${l}${l.startsWith('Subir')||l.startsWith('Apostar')?'':` (${to})`}</button>`}}
+    h+=`<button class="btn alt" type="button" data-pk="allin">All-in (${maxTo})</button>`;
+  }
+  return h;
+}
 function renderActs(myTurn){
   const box=$('acts');let html='';
+  if(G.game==='poker'){html=G.phase==='play'&&me>=0?pokerActs(myTurn):'';
+    if(MODE==='online'&&isHost()&&G.phase==='play'&&G.turn>=0&&G.turn!==me&&!G.players[G.turn].cpu)html+=`<button class="btn alt" type="button" data-act="takeover">¿${esc(G.players[G.turn].name)} no está? Que juegue la CPU</button>`;
+    box.innerHTML=html;return}
   if(G.phase==='play'&&me>=0){
     if(G.game==='tute'){
       const k=canTute(G,me);if(k)html+=`<button class="btn" type="button" data-act="tute">¡Tute de ${k}!</button>`;
@@ -4268,14 +4334,14 @@ function showSummary(){
   const s=G.summary;
   const rows=s.lines.map(l=>{
     const tot=G.score[l.team];
-    const rv=G.reveal?G.reveal.find(r=>r.p===l.team):null;
+    const rv=G.reveal?G.reveal.find(r=>r.p===l.team):l.cards?{melds:[l.cards],loose:[]}:null;
     const rev=rv?`<div class="reveal">${rv.melds.map(m=>`<div class="grp">${m.map(c=>cardHTML(c)).join('')}</div>`).join('')}${rv.loose.length?`<div class="grp lo">${rv.loose.map(c=>cardHTML(c)).join('')}</div>`:''}</div>`:'';
-    const totTxt=G.game==='chinchon'?`Total: ${tot}${G.out[l.team]?' · eliminado':''}`:G.game==='escoba'?`Total: ${tot}`:`Llevan ${tot} punto${tot===1?'':'s'}`;
+    const totTxt=G.game==='poker'?`Fichas: ${G.chips[l.team]}${G.chips[l.team]===0?' · eliminado':''}`:G.game==='chinchon'?`Total: ${tot}${G.out[l.team]?' · eliminado':''}`:G.game==='escoba'?`Total: ${tot}`:`Llevan ${tot} punto${tot===1?'':'s'}`;
     return `<div class="sumrow ${l.win?'win':''}"><b>${esc(l.name)}</b><span>${esc(l.detail)}</span><div class="p">${s.plus&&l.pts>0?'+':''}${l.pts}</div><div class="tot">${totTxt}</div>${rev}</div>`;
   }).join('');
   const champ=G.champ!=null;
-  $('sumCard').innerHTML=`<div class="tag">${GAMES[G.game].name} · ronda ${G.round}</div><h2 id="sumTitle">${esc(s.title)}</h2>${s.why?`<p class="muted">${esc(s.why)}</p>`:''}${rows}
-    <div class="actions">${champ?`<button class="btn big" type="button" data-act="seechamp">Ver al campeón</button>`:`<button class="btn big" type="button" data-act="next">Siguiente ronda</button>`}</div>`;
+  $('sumCard').innerHTML=`<div class="tag">${GAMES[G.game].name} · ${G.game==='poker'?'mano':'ronda'} ${G.round}</div><h2 id="sumTitle">${esc(s.title)}</h2>${s.why?`<p class="muted">${esc(s.why)}</p>`:''}${s.board&&s.board.length?`<div class="reveal" style="justify-content:center"><div class="grp">${s.board.map(c=>cardHTML(c)).join('')}</div></div>`:''}${rows}
+    <div class="actions">${champ?`<button class="btn big" type="button" data-act="seechamp">Ver al campeón</button>`:`<button class="btn big" type="button" data-act="next">${G.game==='poker'?'Siguiente mano':'Siguiente ronda'}</button>`}</div>`;
   $('roundBox').hidden=false;
 }
 function showChamp(){
@@ -4650,6 +4716,7 @@ ROOT.addEventListener('click',e=>{
   if(b.dataset.invto){window.DeporInvite.setTarget({kind:'cartas',id:b.dataset.invto,name:b.dataset.invname});createTable();return}
   if(b.dataset.t){tapTable(b.dataset.t);return}
   if(b.dataset.c){if(dragJust)return;tapCard(b.dataset.c);return}
+  if(b.dataset.pk){const a={t:b.dataset.pk};if(a.t==='raise')a.to=+b.dataset.to;move(a);return}
   if(b.dataset.cantar){move({t:'cantar',s:b.dataset.cantar});return}
   if(b.dataset.take!=null){const o=captures(G.table,sel)[+b.dataset.take];if(o)move({t:'play',c:sel,take:o});return}
   if(b.dataset.rm!=null){const i=+b.dataset.rm;mutate(cur=>{if(!cur||cur.status!=='lobby'||cur.host!==myId||!cur.players[i]?.cpu)return null;cur.players.splice(i,1);return cur}).catch(()=>{});return}
