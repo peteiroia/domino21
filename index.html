@@ -827,6 +827,142 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 
 
 <style>body.nodom :is(#champ,#pickSheet,#watchSheet,#drawSheet,#turnflash,#modal,#rankTab,#scrim,#drawer,#bye,#chatType,#micBtn,#voiceIn,#voicePlaying,#yourTurn){display:none!important}</style>
+<script>
+/* Conexión online por un servidor MQTT público (sin cuentas):
+   1) Tablón de mesas abiertas: mensajes retenidos que ve cualquiera que abra la web.
+   2) Mensajes de las partidas: sustituye a la conexión directa entre móviles (WebRTC), que falla
+      a menudo entre redes distintas. Imita la interfaz de PeerJS para que el dominó y las cartas
+      funcionen sin cambios. */
+window.DeporBoard=(()=>{
+  const URLS=window.DEPOR_BOARD_URLS||['wss://broker.hivemq.com:8884/mqtt','wss://broker.emqx.io:8084/mqtt','wss://test.mosquitto.org:8081/mqtt'];
+  const ROOT='deporjuegos/v1/',MESAS=ROOT+'mesas/',FRESH=180000;
+  const te=new TextEncoder(),td=new TextDecoder();
+  let ws=null,ok=false,buf=new Uint8Array(0),ui=0,tries=0,ping=null,retry=null,pid=1;
+  const items={},mine={},fns=new Set(),subs=new Map(),readyQ=[];
+  const str=s=>{const b=te.encode(s);return [b.length>>8,b.length&255,...b]};
+  const len=n=>{const o=[];do{let d=n%128;n=Math.floor(n/128);if(n>0)d|=128;o.push(d)}while(n>0);return o};
+  const pkt=(h,body)=>{const L=len(body.length),a=new Uint8Array(1+L.length+body.length);a[0]=h;a.set(L,1);a.set(body,1+L.length);return a};
+  const send=p=>{try{if(ws&&ws.readyState===1&&ok||p[0]===0x10&&ws&&ws.readyState===1){ws.send(p);return true}}catch(e){}return false};
+  const nextPid=()=>{pid=pid%65000+1;return [pid>>8,pid&255]};
+  const pubRaw=(topic,bytes,retain)=>{const t=str(topic),b=new Uint8Array(t.length+bytes.length);b.set(t);b.set(bytes,t.length);return send(pkt(retain?0x31:0x30,b))};
+  const subscribeRaw=topic=>send(pkt(0x82,[...nextPid(),...str(topic),0]));
+  const unsubscribeRaw=topic=>send(pkt(0xA2,[...nextPid(),...str(topic)]));
+  const fire=()=>fns.forEach(f=>{try{f()}catch(e){}});
+  function onPacket(t,b){
+    const type=t>>4;
+    if(type===2){
+      ok=true;tries=0;subscribeRaw(MESAS+'#');subs.forEach((_,k)=>subscribeRaw(k));
+      for(const k in mine)pubRaw(k,te.encode(mine[k]),true);
+      readyQ.splice(0).forEach(f=>{try{f()}catch(e){}});fire();return;
+    }
+    if(type===3){
+      const tl=(b[0]<<8)|b[1],topic=td.decode(b.subarray(2,2+tl));let i=2+tl;if(((t>>1)&3)>0)i+=2;
+      const body=td.decode(b.subarray(i));
+      if(topic.startsWith(MESAS)){
+        if(!body)delete items[topic];else{try{const o=JSON.parse(body);if(o&&typeof o==='object')items[topic]=o}catch(e){}}
+        fire();return;
+      }
+      const set=subs.get(topic);if(!set||!body)return;
+      let m;try{m=JSON.parse(body)}catch(e){return}
+      set.forEach(f=>{try{f(m)}catch(e){}});
+    }
+  }
+  function onData(d){
+    const nb=new Uint8Array(buf.length+d.length);nb.set(buf);nb.set(d,buf.length);buf=nb;
+    for(;;){
+      if(buf.length<2)return;
+      let m=1,v=0,i=1,byte;
+      do{if(i>=buf.length)return;byte=buf[i++];v+=(byte&127)*m;m*=128}while(byte&128);
+      if(buf.length<i+v)return;
+      const t=buf[0],body=buf.slice(i,i+v);buf=buf.slice(i+v);onPacket(t,body);
+    }
+  }
+  function connect(){
+    clearTimeout(retry);
+    const url=URLS[ui%URLS.length];
+    try{ws=new WebSocket(url,['mqtt'])}catch(e){ws=null;later();return}
+    ws.binaryType='arraybuffer';buf=new Uint8Array(0);ok=false;
+    const me=ws;
+    const guard=setTimeout(()=>{if(me===ws&&!ok){try{me.close()}catch(e){}}},9000);
+    ws.onopen=()=>{
+      const id='dj'+Math.random().toString(36).slice(2,12);
+      send(pkt(0x10,[...str('MQTT'),4,2,0,45,...str(id)]));
+      clearInterval(ping);ping=setInterval(()=>send(new Uint8Array([0xC0,0])),20000);
+    };
+    ws.onmessage=e=>{if(me===ws)onData(new Uint8Array(e.data))};
+    ws.onclose=ws.onerror=()=>{if(me!==ws)return;clearTimeout(guard);ws=null;ok=false;clearInterval(ping);later()};
+  }
+  function later(){clearTimeout(retry);tries++;ui++;retry=setTimeout(connect,Math.min(15000,800*tries))}
+  setInterval(()=>{for(const k in mine){try{const o=JSON.parse(mine[k]);o.ts=Date.now();mine[k]=JSON.stringify(o);pubRaw(k,te.encode(mine[k]),true)}catch(e){}}},60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!ws)connect()});
+  connect();
+  return {
+    get ready(){return ok},
+    whenReady(f){if(ok)f();else readyQ.push(f)},
+    list(kind){const now=Date.now(),p=MESAS+kind+'/';return Object.entries(items).filter(([k,o])=>k.startsWith(p)&&o&&/^[A-Z]{4}$/.test(o.code||'')&&now-(+o.ts||0)<FRESH).map(([k,o])=>({code:o.code,host:String(o.host||'?').replace(/[<>&"']/g,'').slice(0,14),n:Math.max(1,Math.min(6,+o.n||1)),need:Math.max(2,Math.min(6,+o.need||2)),game:String(o.game||'').replace(/[^a-z]/g,''),ts:+o.ts}))},
+    put(kind,code,o){const k=MESAS+kind+'/'+code;mine[k]=JSON.stringify({...o,code,ts:Date.now()});pubRaw(k,te.encode(mine[k]),true)},
+    del(kind,code){const k=MESAS+kind+'/'+code;delete mine[k];delete items[k];pubRaw(k,new Uint8Array(0),true);fire()},
+    on(f){fns.add(f)},
+    sub(topic,f){let s=subs.get(topic);if(!s){s=new Set();subs.set(topic,s);if(ok)subscribeRaw(topic)}s.add(f)},
+    unsub(topic,f){const s=subs.get(topic);if(!s)return;s.delete(f);if(!s.size){subs.delete(topic);if(ok)unsubscribeRaw(topic)}},
+    tx(topic,obj){return pubRaw(topic,te.encode(JSON.stringify(obj)),false)},
+    ROOT
+  };
+})();
+
+/* Conexiones "tipo PeerJS" sobre el servidor de mensajes */
+(()=>{
+  const B=window.DeporBoard,PT=B.ROOT+'p/';
+  const rid=()=>Math.random().toString(36).slice(2,12);
+  class Em{constructor(){this._h={}}on(e,f){(this._h[e]=this._h[e]||[]).push(f);return this}off(e,f){if(this._h[e])this._h[e]=this._h[e].filter(x=>x!==f);return this}emit(e,...a){(this._h[e]||[]).slice().forEach(f=>{try{f(...a)}catch(x){setTimeout(()=>{throw x})}})}}
+  class Conn extends Em{
+    constructor(peer,remote,cid){super();this._p=peer;this.peer=remote;this.cid=cid;this.open=false;this.last=Date.now();this.reliable=true}
+    send(d){if(!this.open)return;this._p._tx(this.peer,{k:'data',cid:this.cid,from:this._p.id,d})}
+    close(){if(this._gone)return;this._gone=true;const was=this.open;this.open=false;delete this._p.conns[this.cid];this._p._tx(this.peer,{k:'close',cid:this.cid,from:this._p.id});if(was)this.emit('close')}
+    _drop(){if(this._gone)return;this._gone=true;this.open=false;delete this._p.conns[this.cid];this.emit('close')}
+  }
+  class MPeer extends Em{
+    constructor(id,opts){
+      super();if(id&&typeof id==='object'){opts=id;id=null}
+      this.id=id||('mp'+rid());this.conns={};this.open=false;this.destroyed=false;this.disconnected=false;this.nonce=rid();
+      this._rx=m=>this._onMsg(m);B.sub(PT+this.id,this._rx);
+      B.whenReady(()=>{if(this.destroyed)return;
+        this._tx(this.id,{k:'claim',nonce:this.nonce});
+        this._ct=setTimeout(()=>{if(this.destroyed||this.open)return;this.open=true;this.emit('open',this.id)},1400);
+      });
+      this._ka=setInterval(()=>{const now=Date.now();for(const c of Object.values(this.conns)){if(!c.open)continue;this._tx(c.peer,{k:'ping',cid:c.cid,from:this.id});if(now-c.last>32000)c._drop()}},8000);
+    }
+    _tx(to,m){B.tx(PT+to,m)}
+    _onMsg(m){
+      if(this.destroyed||!m||typeof m!=='object')return;
+      if(m.k==='claim'){if(m.nonce!==this.nonce&&this.open)this._tx(this.id,{k:'taken',nonce:m.nonce});return}
+      if(m.k==='taken'){if(m.nonce===this.nonce&&!this.open){clearTimeout(this._ct);this.destroyed=true;B.unsub(PT+this.id,this._rx);clearInterval(this._ka);const e=new Error('El nombre ya está en uso');e.type='unavailable-id';this.emit('error',e)}return}
+      if(!this.open)return;
+      const c=this.conns[m.cid];
+      if(m.k==='conn'&&typeof m.from==='string'&&typeof m.cid==='string'){
+        if(c)return;const n=new Conn(this,m.from,m.cid);n.open=true;this.conns[m.cid]=n;
+        this._tx(m.from,{k:'ack',cid:m.cid,from:this.id});this.emit('connection',n);setTimeout(()=>{if(n.open)n.emit('open')},0);return;
+      }
+      if(!c||c.peer!==m.from)return;
+      c.last=Date.now();
+      if(m.k==='ack'){if(!c.open){c.open=true;clearTimeout(c._t);c.emit('open')}return}
+      if(m.k==='data'){if(c.open)c.emit('data',m.d);return}
+      if(m.k==='close'){c._drop();return}
+    }
+    connect(remote){
+      const c=new Conn(this,String(remote),rid());this.conns[c.cid]=c;
+      const go=()=>{if(this.destroyed)return;this._tx(c.peer,{k:'conn',from:this.id,cid:c.cid});
+        c._t=setTimeout(()=>{if(!c.open&&!c._gone){c._gone=true;delete this.conns[c.cid];const e=new Error('No hay nadie con ese código');e.type='peer-unavailable';this.emit('error',e)}},5000)};
+      if(this.open)go();else this.on('open',go);
+      return c;
+    }
+    reconnect(){this.disconnected=false}
+    destroy(){if(this.destroyed)return;Object.values(this.conns).forEach(c=>c.close());this.destroyed=true;this.open=false;clearTimeout(this._ct);clearInterval(this._ka);B.unsub(PT+this.id,this._rx);this.emit('close')}
+  }
+  window.Peer=MPeer;
+})();
+
+</script>
 <div id="gamesHost"></div>
 <div class="wrap" id="appDomino" hidden>
   <header>
@@ -2053,17 +2189,21 @@ function renderOnlineBox(){
     <div class="seg" id="needSeg">${[2,3,4].map(n=>`<button type="button" data-need="${n}" aria-pressed="${n===needN}">${n}</button>`).join('')}</div>
     <button class="btn big" type="button" id="createBtn">Crear partida de ${needN}</button>
     ${gamesHTML()}
-    <div class="sub"><span class="muted">¿Te han pasado un código?</span><input type="text" id="codeIn" class="code-in" maxlength="4" placeholder="CÓDIGO" autocomplete="off"><button class="btn alt" type="button" id="joinBtn">Unirse</button></div>
+    <div class="sub"><span class="muted">¿Te han pasado un código?</span><input type="text" id="codeIn" class="code-in" maxlength="4" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go"><button class="btn alt" type="button" id="joinBtn">Unirse</button></div>
     ${installHTML()}
     <p class="muted">Sin cuentas ni apps: tus amigos verán tu partida aquí o entrarán con el enlace. El móvil que crea la partida hace de mesa, así que debe tenerla abierta mientras jugáis.</p>
   </div>`;
-  if(box._html===html)return;box._html=html;box.innerHTML=html;
+  if(box._html===html)return;
+  const ae=document.activeElement,typing=ae&&ae.id==='codeIn',caret=typing?ae.selectionStart:0;
+  box._html=html;box.innerHTML=html;
   if(keep)$('codeIn').value=keep;
+  if(typing){const ni=$('codeIn');try{ni.focus({preventScroll:true});ni.setSelectionRange(caret,caret)}catch(e){}}
 }
 function gamesHTML(){
   const now=Date.now();
-  const list=Object.values(lob.games||{}).filter(g=>g&&g.code&&g.n<g.need&&now-(g.ts||0)<90000&&!(lob.mine&&lob.mine.code===g.code)).sort((a,b)=>b.ts-a.ts);
-  const st=lob.role?'' :'<span class="muted" style="font-size:12px"> · buscando…</span>';
+  const seen={};const ext=window.DeporBoard?window.DeporBoard.list('domino'):[];
+  const list=[...Object.values(lob.games||{}).filter(g=>g&&g.code&&now-(g.ts||0)<90000),...ext].filter(g=>g&&g.code&&g.n<g.need&&!(lob.mine&&lob.mine.code===g.code)&&!seen[g.code]&&(seen[g.code]=1)).sort((a,b)=>b.ts-a.ts);
+  const st=lob.role||(window.DeporBoard&&window.DeporBoard.ready)?'' :'<span class="muted" style="font-size:12px"> · buscando…</span>';
   return `<div class="tag"><span class="livedot"></span>Partidas disponibles (${list.length})${st}</div>`+
     (list.length?`<div class="open-list">${list.map(g=>`<div class="avail"><div class="info"><b>Partida de ${esc(g.host)}</b><span>${g.n} de ${g.need} jugadores${g.need===4?' · por parejas':''}</span></div><button class="btn" type="button" data-code="${esc(g.code)}">Unirse</button></div>`).join('')}</div>`
       :'<p class="muted" style="margin:0">Todavía no hay partidas esperando. Crea una y aparecerá aquí para los demás.</p>');
@@ -2077,6 +2217,7 @@ function usersHTML(){
 }
 /* ---------- Tablón de partidas sin servidor: el primer móvil que abre el juego hace de tablón; si se va, otro toma el relevo ---------- */
 const lob={peer:null,role:null,conn:null,conns:new Set(),games:{},mine:null,timer:null,users:{},challenge:null};
+window.DeporBoard&&window.DeporBoard.on(()=>{try{lobbyRender()}catch(e){}});
 function lobbyRender(){if(!$('scrMenu').hidden&&document.activeElement?.id!=='codeIn')renderOnlineBox()}
 function lobbyRetry(ms){clearTimeout(lob.timer);lob.timer=setTimeout(lobbyStart,ms)}
 function lobbyReset(){try{lob.peer&&lob.peer.destroy()}catch(e){}lob.peer=null;lob.role=null;lob.conn=null;lob.conns=new Set()}
@@ -2128,6 +2269,7 @@ function lobbySync(){
   const d=netRole==='host'&&hostDoc;
   const want=d&&d.status==='lobby'&&d.players.length<(d.need||4)?{code:d.code,host:(d.players.find(p=>p.id===d.host)||{}).name||'Anfitrión',n:d.players.length,need:d.need||4}:null;
   const prev=lob.mine;lob.mine=want;
+  if(window.DeporBoard){if(prev&&(!want||prev.code!==want.code))window.DeporBoard.del('domino',prev.code);if(want)window.DeporBoard.put('domino',want.code,{host:want.host,n:want.n,need:want.need})}
   if(lob.role==='reg'){if(prev&&(!want||prev.code!==want.code))delete lob.games[prev.code];if(want)lob.games[want.code]={...want,ts:Date.now(),owner:'self'};regBroadcast()}
   else if(lob.role==='cli'&&lob.conn&&lob.conn.open){try{if(want)lob.conn.send({t:'reg',g:want});else if(prev)lob.conn.send({t:'unreg',code:prev.code})}catch(e){}}
   if(want&&lob.challenge)sendInvite(want.code);
@@ -3039,7 +3181,10 @@ button.pile.go .back,button.pile.go .card{box-shadow:0 0 0 3px var(--brass),0 0 
 (()=>{
 /* ===== Motor de juegos (puro: solo trabaja sobre el estado g) ===== */
 const clone=o=>JSON.parse(JSON.stringify(o));
-function rnd(n){try{const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n}catch(e){return Math.floor(Math.random()*n)}}
+function rnd(n){
+  try{const lim=Math.floor(4294967296/n)*n,b=new Uint32Array(1);do{crypto.getRandomValues(b)}while(b[0]>=lim);return b[0]%n}
+  catch(e){return Math.floor(Math.random()*n)}
+}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
 const SUITS=['o','c','e','b'];
 const SUIT_NAME={o:'oros',c:'copas',e:'espadas',b:'bastos'};
@@ -3048,7 +3193,9 @@ const RNAME={1:'As',10:'Sota',11:'Caballo',12:'Rey'};
 const S=c=>c[0], R=c=>+c.slice(1);
 const rn=r=>RNAME[r]||String(r);
 const cardName=c=>`${rn(R(c))} de ${SUIT_NAME[S(c)]}`;
-const newDeck=()=>shuffle(SUITS.flatMap(s=>RANKS.map(r=>s+r)));
+/* Barajado: tres pasadas de Fisher-Yates con azar criptográfico y un corte al azar */
+function riffle(a){shuffle(a);shuffle(a);shuffle(a);const k=1+rnd(a.length-1);return a.slice(k).concat(a.slice(0,k))}
+const newDeck=()=>riffle(SUITS.flatMap(s=>RANKS.map(r=>s+r)));
 const POW={1:10,3:9,12:8,11:7,10:6,7:5,6:4,5:3,4:2,2:1};
 const PTS={1:11,3:10,12:4,11:3,10:2};
 const pts=c=>PTS[R(c)]||0;
@@ -3059,6 +3206,7 @@ const GAMES={
   chinchon:{name:'Chinchón',min:2,max:4,teams:false,blurb:'Liga tríos y escaleras. Cierra con seis ligadas y una suelta; quien llegue a 101, fuera.'},
   tute:{name:'Tute',min:2,max:4,teams:true,blurb:'Bazas con arrastre, cantes de 20 y 40 y las diez de últimas. Cada juego, un punto: a 8.'},
   brisca:{name:'Brisca',min:2,max:4,teams:true,blurb:'Bazas con triunfo y sin obligación de asistir. Más de 60 gana el juego. Cada juego, un punto: a 8.'},
+  poker:{name:"Texas Hold'em",min:2,max:6,teams:false,blurb:'Póker con baraja francesa: dos cartas tuyas y cinco en la mesa. Ciegas que suben; gana quien se queda con todas las fichas.'},
   escoba:{name:'Escoba',min:2,max:4,teams:false,blurb:'Suma 15 con la mesa para llevarte cartas. Escobas, oros, sietes y el siete de oros. A 21.'}
 };
 const TARGET={brisca:8,tute:8,escoba:21,chinchon:101};
@@ -3179,7 +3327,7 @@ function trickEnd(g,forced,why){
   if(win!=null&&g.score[win]>=TARGET[g.game])g.champ=win;
   g.log=g.summary.title+'.';
 }
-function trickCpu(g){
+function trickHeur(g){
   const who=g.turn;
   if(g.game==='tute'&&g.canSing===who&&!g.trick.length){
     if(canTute(g,who))return {t:'tute'};
@@ -3274,27 +3422,6 @@ function escobaEnd(g){
   if(top>=TARGET.escoba){const w=g.score.map((v,i)=>v===top?i:-1).filter(i=>i>=0);if(w.length===1)g.champ=w[0]}
   g.log=rest||'Fin de la ronda.';
 }
-function escobaCpu(g){
-  const who=g.turn,h=g.hands[who];let best=null,bv=-1e9;
-  for(const c of h){
-    for(const o of captures(g.table,c)){
-      const all=[c,...o],esc=o.length===g.table.length;
-      const v=(esc?100:0)+(all.includes('o7')?30:0)+all.filter(x=>R(x)===7).length*8+all.filter(x=>S(x)==='o').length*3+all.length*1.5;
-      if(v>bv){bv=v;best={t:'play',c,take:o}}
-    }
-  }
-  if(best)return best;
-  const tsum=g.table.reduce((s,c)=>s+eVal(c),0);
-  let pick=null,pv=1e9;
-  for(const c of h){
-    const total=tsum+eVal(c);
-    const risk=(total>=5&&total<=14?20:0)+(c==='o7'?25:0)+(R(c)===7?8:0)+(S(c)==='o'?3:0);
-    const v=risk-eVal(c)*.5;
-    if(v<pv){pv=v;pick=c}
-  }
-  return {t:'play',c:pick,take:[]};
-}
-
 /* ---------- Chinchón ---------- */
 const cVal=c=>{const r=R(c);return r<=7?r:10};
 const IDX=c=>RANKS.indexOf(R(c));
@@ -3325,7 +3452,7 @@ function chinDeal(g){
   g.round++;g.dealer=activeNext(g,g.dealer);g.phase='play';g.summary=null;g.last=null;g.reveal=null;
   g.deck=newDeck();g.hands=g.players.map(()=>[]);
   for(let k=0;k<7;k++)g.players.forEach((p,i)=>{if(!g.out[i])g.hands[i].push(g.deck.pop())});
-  g.disc=[g.deck.pop()];g.step='draw';g.took=null;g.reshuf=0;g.turns=0;
+  g.disc=[g.deck.pop()];g.picked={};g.step='draw';g.took=null;g.reshuf=0;g.turns=0;
   g.turn=activeNext(g,g.dealer);
   g.log=`Ronda ${g.round}. Reparte ${g.players[g.dealer].name}.`;
 }
@@ -3334,7 +3461,7 @@ function chinAct(g,who,a){
   if(g.phase!=='play'||g.turn!==who)return false;
   const h=g.hands[who],nm=g.players[who].name;
   if(a.t==='draw'&&g.step==='draw'){
-    if(a.from==='disc'){if(!g.disc.length)return false;const c=g.disc.pop();h.push(c);g.took=c;g.log=`${nm} coge el ${cardName(c)} del descarte.`}
+    if(a.from==='disc'){if(!g.disc.length)return false;const c=g.disc.pop();h.push(c);g.took=c;g.picked=g.picked||{};g.picked[who]=[...(g.picked[who]||[]),c].slice(-6);g.log=`${nm} coge el ${cardName(c)} del descarte.`}
     else{
       if(!g.deck.length){
         if(g.disc.length<2)return false;
@@ -3390,23 +3517,305 @@ function chinWorth(rest){
   for(const c of s.loose){if(s.loose.some(x=>x!==c&&(R(x)===R(c)||S(x)===S(c)&&Math.abs(IDX(x)-IDX(c))<=2)))v-=cVal(c)*.5}
   return v;
 }
+/* ---------- CPU fuerte para brisca y tute: simulación de manos posibles ----------
+   La CPU no mira cartas ajenas: reparte al azar las cartas que no ve (manos rivales + mazo)
+   muchas veces, juega cada opción hasta el final de la ronda y elige la que más puntos da de media. */
+function trickPlayout(g,eps){
+  let guard=0;
+  while(g.phase==='play'&&guard++<200){
+    if(g.trickDone){trickResolve(g);continue}
+    const who=g.turn;let a=trickHeur(g);
+    if(a.t==='play'&&Math.random()<eps){const l=trickLegal(g,who);a={t:'play',c:l[rnd(l.length)]}}
+    if(!trickAct(g,who,a)){const l=trickLegal(g,who);if(!l.length)break;trickAct(g,who,{t:'play',c:l[0]})}
+  }
+  return g;
+}
+function trickCpu(g){
+  const who=g.turn;
+  if(g.game==='tute'&&g.canSing===who&&!g.trick.length){
+    if(canTute(g,who))return {t:'tute'};
+    const s=singable(g,who);if(s.length)return {t:'cantar',s:s[0]};
+  }
+  const legal=trickLegal(g,who);
+  if(legal.length===1)return {t:'play',c:legal[0]};
+  const n=g.players.length,myT=teamOf(g,who);
+  const viraHidden=g.deck.length>0;            // la vira (deck[0]) está boca arriba: se conoce
+  const pool=[];for(let i=0;i<n;i++)if(i!==who)pool.push(...g.hands[i]);
+  const deckRest=viraHidden?g.deck.slice(1):[];
+  pool.push(...deckRest);
+  const budget=g.game==='tute'?900:700,samples=Math.max(12,Math.min(60,Math.floor(budget/legal.length)));
+  const score=Object.fromEntries(legal.map(c=>[c,0]));
+  for(let s=0;s<samples;s++){
+    const sh=shuffle(pool.slice());let k=0;
+    const base=clone(g);base.sim=true;
+    for(let i=0;i<n;i++)if(i!==who){base.hands[i]=sh.slice(k,k+g.hands[i].length);k+=g.hands[i].length}
+    if(viraHidden)base.deck=[g.deck[0],...sh.slice(k)];
+    for(const c of legal){
+      const x=clone(base);
+      trickAct(x,who,{t:'play',c});
+      trickPlayout(x,.12);
+      let v;
+      if(x.summary&&x.summary.why){v=x.summary.lines.find(l=>l.win)?.team===myT?150:-150}
+      else{const mine=x.pts[myT],other=Math.max(...x.pts.filter((_,t)=>t!==myT));v=mine-other+(mine>other?25:mine<other?-25:0)}
+      score[c]+=v;
+    }
+  }
+  let best=legal[0];for(const c of legal)if(score[c]>score[best])best=c;
+  return {t:'play',c:best};
+}
+
+/* ---------- CPU fuerte para escoba: lo que se lleva menos lo que deja al siguiente ---------- */
+const eWorth=cs=>cs.reduce((s,c)=>s+1+(S(c)==='o'?1.3:0)+(R(c)===7?2.6:0)+(c==='o7'?6:0),0);
+function escobaCpu(g){
+  const who=g.turn,h=g.hands[who],n=g.players.length,nxt=nextOf(g,who);
+  const seen=new Set([...h,...g.table,...g.taken.flat()]);
+  const unseen=SUITS.flatMap(s=>RANKS.map(r=>s+r)).filter(c=>!seen.has(c));
+  const oppN=g.hands[nxt].length||Math.min(3,unseen.length);
+  const moves=[];
+  for(const c of h){
+    for(const o of captures(g.table,c))moves.push({c,take:o});
+    moves.push({c,take:[]});
+  }
+  const threat=table=>{
+    if(!table.length)return 0;
+    let tot=0;const S_=14;
+    for(let s=0;s<S_;s++){
+      const hand=shuffle(unseen.slice()).slice(0,oppN);let best=0;
+      for(const c of hand)for(const o of captures(table,c)){const v=eWorth([c,...o])+(o.length===table.length?11:0);if(v>best)best=v}
+      tot+=best;
+    }
+    return tot/S_;
+  };
+  const late=g.deck.length===0&&g.hands.every((x,i)=>i===who||x.length<=1);
+  let bm=null,bv=-1e9;
+  for(const m of moves){
+    let v;
+    if(m.take.length){
+      const rest=g.table.filter(c=>!m.take.includes(c));
+      v=eWorth([m.c,...m.take])+(rest.length===0?11:0)-.85*threat(rest);
+    }else{
+      const rest=[...g.table,m.c];
+      v=-eWorth([m.c])*.6-.85*threat(rest)+(late?0:0);
+    }
+    v+=Math.random()*.15;
+    if(v>bv){bv=v;bm=m}
+  }
+  return {t:'play',c:bm.c,take:bm.take};
+}
+
+/* ---------- Chinchón: además evita tirar lo que le sirve al rival ---------- */
+function chinDanger(g,c,who){
+  const nxt=activeNext(g,who),picked=(g.picked&&g.picked[nxt])||[];
+  let d=0;
+  for(const p of picked){if(R(p)===R(c))d+=3;if(S(p)===S(c)&&Math.abs(IDX(p)-IDX(c))<=2)d+=2.5}
+  return d;
+}
 function chinCpu(g){
   const who=g.turn,h=g.hands[who];
   if(g.step==='draw'){
     const top=g.disc[g.disc.length-1];
     if(top){
-      const cur=solve(h).dead;
       const h8=[...h,top];let bestAfter=1e9;
       for(const c of h8){if(c===top)continue;const d=chinWorth(h8.filter(x=>x!==c));if(d<bestAfter)bestAfter=d}
-      if(bestAfter<=chinWorth(h)-3)return {t:'draw',from:'disc'};
+      const closes=h8.some(y=>y!==top&&canClose(h8.filter(z=>z!==y)));
+      if(bestAfter<=chinWorth(h)-2.5||closes)return {t:'draw',from:'disc'};
     }
     return {t:'draw',from:'deck'};
   }
   let pick=null,pd=1e9;
-  for(const c of h){if(c===g.took)continue;const d=chinWorth(h.filter(x=>x!==c));if(d<pd||(d===pd&&cVal(c)>cVal(pick))){pd=d;pick=c}}
+  for(const c of h){
+    if(c===g.took&&h.length>1)continue;
+    const rest=h.filter(x=>x!==c);
+    const d=chinWorth(rest)+chinDanger(g,c,who)*.6-(canClose(rest)?6:0);
+    if(d<pd||(d===pd&&cVal(c)>cVal(pick))){pd=d;pick=c}
+  }
   if(!pick)pick=h[0];
   const rest=h.filter(c=>c!==pick);
-  return {t:'discard',c:pick,close:canClose(rest)};
+  const s=solve(rest,true);
+  // cierra si puede; espera al chinchón o al cierre limpio solo cuando va muy cómodo
+  return {t:'discard',c:pick,close:canClose(rest)&&!(s.loose.length===1&&cVal(s.loose[0])>=6&&g.deck.length>18&&Math.random()<.35)};
+}
+
+/* ======================= Texas Hold'em ======================= */
+const PSU=['H','D','C','S'];
+const PSU_NAME={H:'corazones',D:'diamantes',C:'tréboles',S:'picas'};
+const PRN={11:'J',12:'Q',13:'K',14:'A'};
+const PRN_LONG={2:'dos',3:'tres',4:'cuatro',5:'cinco',6:'seis',7:'siete',8:'ocho',9:'nueve',10:'diez',11:'jota',12:'reina',13:'rey',14:'as'};
+const PRN_PL={2:'doses',3:'treses',4:'cuatros',5:'cincos',6:'seises',7:'sietes',8:'ochos',9:'nueves',10:'dieces',11:'jotas',12:'reinas',13:'reyes',14:'ases'};
+const pokerName=c=>`${PRN_LONG[R(c)].replace(/^./,m=>m.toUpperCase())} de ${PSU_NAME[S(c)]}`;
+const pokerDeck=()=>riffle(PSU.flatMap(s=>[2,3,4,5,6,7,8,9,10,11,12,13,14].map(r=>s+r)));
+/* Valor de la mejor jugada con 5 a 7 cartas: [categoría, desempates...] */
+function evalHand(cs){
+  const rs=cs.map(R).sort((a,b)=>b-a),cnt={},bySuit={};
+  for(const c of cs){cnt[R(c)]=(cnt[R(c)]||0)+1;(bySuit[S(c)]=bySuit[S(c)]||[]).push(R(c))}
+  const straight=arr=>{const u=[...new Set(arr)].sort((a,b)=>b-a);if(u[0]===14)u.push(1);let run=1;for(let i=1;i<u.length;i++){if(u[i]===u[i-1]-1){run++;if(run>=5)return u[i]+4}else run=1}return 0};
+  for(const s in bySuit)if(bySuit[s].length>=5){const sf=straight(bySuit[s]);if(sf)return [8,sf]}
+  const groups=Object.entries(cnt).map(([r,n])=>[+r,n]).sort((a,b)=>b[1]-a[1]||b[0]-a[0]);
+  if(groups[0][1]===4){const k=rs.find(r=>r!==groups[0][0]);return [7,groups[0][0],k]}
+  if(groups[0][1]===3&&groups[1]&&groups[1][1]>=2)return [6,groups[0][0],groups[1][0]];
+  for(const s in bySuit)if(bySuit[s].length>=5)return [5,...bySuit[s].sort((a,b)=>b-a).slice(0,5)];
+  const st=straight(rs);if(st)return [4,st];
+  if(groups[0][1]===3)return [3,groups[0][0],...rs.filter(r=>r!==groups[0][0]).slice(0,2)];
+  if(groups[0][1]===2&&groups[1]&&groups[1][1]===2){const k=rs.find(r=>r!==groups[0][0]&&r!==groups[1][0]);return [2,groups[0][0],groups[1][0],k]}
+  if(groups[0][1]===2)return [1,groups[0][0],...rs.filter(r=>r!==groups[0][0]).slice(0,3)];
+  return [0,...rs.slice(0,5)];
+}
+const cmpHand=(a,b)=>{for(let i=0;i<Math.max(a.length,b.length);i++){const d=(a[i]||0)-(b[i]||0);if(d)return d}return 0};
+function handLabel(v){
+  const n=r=>PRN_LONG[r],p=r=>PRN_PL[r];
+  switch(v[0]){
+    case 8:return v[1]===14?'Escalera real':`Escalera de color al ${n(v[1])}`;
+    case 7:return `Póker de ${p(v[1])}`;
+    case 6:return `Full de ${p(v[1])} y ${p(v[2])}`;
+    case 5:return `Color al ${n(v[1])}`;
+    case 4:return `Escalera al ${n(v[1])}`;
+    case 3:return `Trío de ${p(v[1])}`;
+    case 2:return `Doble pareja de ${p(v[1])} y ${p(v[2])}`;
+    case 1:return `Pareja de ${p(v[1])}`;
+    default:return `Carta alta: ${n(v[1])}`;
+  }
+}
+const PK_START=1000;
+const pkAlive=g=>g.players.map((_,i)=>i).filter(i=>g.chips[i]>0||g.inHand&&g.inHand[i]);
+const pkNextSeat=(g,i,pred)=>{const n=g.players.length;for(let k=1;k<=n;k++){const j=(i+k)%n;if(pred(j))return j}return -1};
+const pkCanAct=(g,i)=>g.inHand[i]&&!g.folded[i]&&g.chips[i]>0;
+const pkLive=(g,i)=>g.inHand[i]&&!g.folded[i];
+function pokerDeal(g){
+  const n=g.players.length;
+  if(!g.chips){g.chips=Array(n).fill(PK_START);g.dealer=rnd(n)}
+  g.round++;
+  g.inHand=g.chips.map(c=>c>0);
+  const alive=g.inHand.filter(Boolean).length;
+  if(alive<2){g.champ=g.inHand.indexOf(true);g.phase='end';return}
+  g.dealer=pkNextSeat(g,g.dealer,i=>g.inHand[i]);
+  g.bb=20*(1+Math.floor((g.round-1)/6));g.sb=g.bb/2;
+  g.deck=pokerDeck();g.board=[];g.hands=g.players.map(()=>[]);
+  g.folded=g.players.map(()=>false);g.bet=g.players.map(()=>0);g.total=g.players.map(()=>0);g.acted=g.players.map(()=>false);
+  for(let k=0;k<2;k++)for(let j=1;j<=n;j++){const i=(g.dealer+j)%n;if(g.inHand[i])g.hands[i].push(g.deck.pop())}
+  const heads=alive===2;
+  const sbSeat=heads?g.dealer:pkNextSeat(g,g.dealer,i=>g.inHand[i]);
+  const bbSeat=pkNextSeat(g,sbSeat,i=>g.inHand[i]);
+  g.sbSeat=sbSeat;g.bbSeat=bbSeat;
+  pkPut(g,sbSeat,g.sb);pkPut(g,bbSeat,g.bb);
+  g.cur=g.bb;g.minRaise=g.bb;g.street=0;g.phase='play';g.summary=null;g.reveal=null;g.last=null;g.lastAgg=bbSeat;
+  g.turn=pkNextSeat(g,bbSeat,i=>pkCanAct(g,i));
+  g.score=g.chips.slice();
+  g.log=`Mano ${g.round}. Ciegas ${g.sb}/${g.bb}. Reparte ${g.players[g.dealer].name}.`;
+  if(g.turn<0||pkSettled(g))pkAdvance(g);
+}
+function pkPut(g,i,amt){const a=Math.min(amt,g.chips[i]);g.chips[i]-=a;g.bet[i]+=a;g.total[i]+=a;return a}
+const pkPot=g=>g.total.reduce((a,b)=>a+b,0);
+function pkSettled(g){
+  const live=g.players.map((_,i)=>i).filter(i=>pkLive(g,i));
+  if(live.length<=1)return true;
+  const act=live.filter(i=>g.chips[i]>0);
+  return act.every(i=>g.acted[i]&&g.bet[i]===g.cur)&&(act.length>0||true);
+}
+function pokerAct(g,who,a){
+  if(g.phase!=='play'||g.turn!==who||!pkCanAct(g,who))return false;
+  const toCall=g.cur-g.bet[who],nm=g.players[who].name;
+  if(a.t==='fold'){g.folded[who]=true;g.log=`${nm} se retira.`}
+  else if(a.t==='call'){
+    if(toCall<=0)g.log=`${nm} pasa.`;
+    else{const p=pkPut(g,who,toCall);g.log=g.chips[who]===0?`${nm} va all-in con ${p}.`:`${nm} iguala ${p}.`}
+  }else if(a.t==='raise'||a.t==='allin'){
+    const maxTo=g.bet[who]+g.chips[who];
+    let to=a.t==='allin'?maxTo:Math.floor(+a.to||0);
+    if(to>maxTo)to=maxTo;
+    if(to<=g.cur){if(a.t!=='allin')return false;const p=pkPut(g,who,g.chips[who]);g.log=`${nm} va all-in con ${p}.`;g.acted[who]=true;g.last={p:who,a:'allin'};return pkAfter(g,who)}
+    const full=to-g.cur>=g.minRaise;
+    if(!full&&to!==maxTo)return false;
+    const raise=to-g.cur;pkPut(g,who,to-g.bet[who]);
+    if(full){g.minRaise=raise;g.players.forEach((_,i)=>{if(i!==who)g.acted[i]=false})}
+    g.cur=to;g.lastAgg=who;
+    g.log=g.chips[who]===0?`${nm} va all-in: ${to}.`:(toCall>0||g.street===0?`${nm} sube a ${to}.`:`${nm} apuesta ${to}.`);
+  }else return false;
+  g.acted[who]=true;g.last={p:who,a:a.t};
+  return pkAfter(g,who);
+}
+function pkAfter(g,who){
+  const live=g.players.map((_,i)=>i).filter(i=>pkLive(g,i));
+  if(live.length===1){pkShow(g,true);return true}
+  if(pkSettled(g)){pkAdvance(g);return true}
+  g.turn=pkNextSeat(g,who,i=>pkCanAct(g,i));
+  if(g.turn<0)pkAdvance(g);
+  return true;
+}
+function pkAdvance(g){
+  // cierra la calle; si nadie más puede apostar, saca el resto de la mesa
+  for(;;){
+    g.bet=g.bet.map(()=>0);g.cur=0;g.minRaise=g.bb;g.acted=g.acted.map(()=>false);
+    if(g.street>=3){pkShow(g,false);return}
+    g.street++;
+    if(g.street===1)g.board.push(g.deck.pop(),g.deck.pop(),g.deck.pop());else g.board.push(g.deck.pop());
+    const canAct=g.players.map((_,i)=>i).filter(i=>pkCanAct(g,i));
+    if(canAct.length>=2){g.turn=pkNextSeat(g,g.dealer,i=>pkCanAct(g,i));g.log=['','Sale el flop.','Sale el turn.','Sale el river.'][g.street]+' '+g.log;return}
+  }
+}
+function pkShow(g,uncontested){
+  const n=g.players.length,live=g.players.map((_,i)=>i).filter(i=>pkLive(g,i));
+  const won=Array(n).fill(0),vals={};
+  if(uncontested){won[live[0]]=pkPot(g)}
+  else{
+    live.forEach(i=>vals[i]=evalHand([...g.hands[i],...g.board]));
+    const levels=[...new Set(g.total.filter(t=>t>0))].sort((a,b)=>a-b);let prev=0;
+    for(const L of levels){
+      let pot=0;g.total.forEach(t=>{pot+=Math.max(0,Math.min(t,L)-prev)});
+      const elig=live.filter(i=>g.total[i]>=L);
+      if(pot>0&&elig.length){
+        let best=[elig[0]];for(const i of elig.slice(1)){const c=cmpHand(vals[i],vals[best[0]]);if(c>0)best=[i];else if(c===0)best.push(i)}
+        const share=Math.floor(pot/best.length);best.forEach(i=>won[i]+=share);
+        let rem=pot-share*best.length;const order=[...best].sort((a,b)=>((a-g.dealer+n)%n)-((b-g.dealer+n)%n));if(rem)won[order[0]]+=rem;
+      }else if(pot>0){const i=g.total.indexOf(L);won[i]+=pot}
+      prev=L;
+    }
+  }
+  won.forEach((w,i)=>g.chips[i]+=w);
+  const lines=g.players.map((p,i)=>g.inHand[i]?{team:i,name:p.name,detail:g.folded[i]?'Se retiró':uncontested?'':handLabel(vals[i]),pts:won[i]-g.total[i],win:won[i]>0,cards:!g.folded[i]&&!uncontested?g.hands[i]:null}:null).filter(Boolean);
+  const winners=won.map((w,i)=>w>0?i:-1).filter(i=>i>=0);
+  const wname=winners.map(i=>g.players[i].name).join(' y ');
+  g.summary={title:uncontested?`${wname} se lleva el bote`:`Gana ${wname}`,lines,unit:'fichas',why:uncontested?'':`Bote de ${pkPot(g)} fichas.`+(winners.length===1&&vals[winners[0]]?` ${handLabel(vals[winners[0]])}.`:''),scoreLabel:'fichas',plus:true,board:!uncontested?g.board.slice():null};
+  g.score=g.chips.slice();
+  g.phase='end';g.turn=-1;
+  const alive=g.chips.filter(c=>c>0).length;
+  if(alive===1)g.champ=g.chips.findIndex(c=>c>0);
+  g.log=g.summary.title+'.';
+}
+/* Fuerza de mano por simulación contra los rivales que siguen en la mano */
+function pkEquity(g,who,iters){
+  const opp=g.players.map((_,i)=>i).filter(i=>i!==who&&pkLive(g,i)).length;
+  const known=new Set([...g.hands[who],...g.board]);
+  const pool=PSU.flatMap(s=>[2,3,4,5,6,7,8,9,10,11,12,13,14].map(r=>s+r)).filter(c=>!known.has(c));
+  let win=0;
+  for(let t=0;t<iters;t++){
+    const d=shuffle(pool.slice());let k=0;
+    const board=[...g.board];while(board.length<5)board.push(d[k++]);
+    const me=evalHand([...g.hands[who],...board]);let best=1,tie=0;
+    for(let o=0;o<opp;o++){const v=evalHand([d[k++],d[k++],...board]);const c=cmpHand(me,v);if(c<0){best=0;break}if(c===0)tie++}
+    if(best)win+=tie?1/(tie+1):1;
+  }
+  return {eq:win/iters,opp};
+}
+function pokerCpu(g){
+  const who=g.turn,toCall=g.cur-g.bet[who],pot=pkPot(g),stack=g.chips[who];
+  const {eq,opp}=pkEquity(g,who,g.street===0?260:340);
+  const fair=1/(opp+1),rel=eq/fair;                    // >1: mejor que la media de la mesa
+  const odds=toCall>0?toCall/(pot+toCall):0;
+  const rr=Math.random();
+  const raiseTo=f=>Math.max(g.cur+g.minRaise,Math.round((g.cur+(pot+toCall)*f)/g.bb)*g.bb);
+  const doRaise=f=>{const to=raiseTo(f);return to>=g.bet[who]+stack?{t:'allin'}:{t:'raise',to}};
+  const spr=stack/Math.max(pot,1);
+  if(toCall===0){
+    if(rel>1.75||eq>.72)return rr<.85?doRaise(spr<1.2?9:(.55+Math.random()*.45)):{t:'call'};
+    if(rel>1.25&&rr<.55)return doRaise(.45+Math.random()*.3);
+    if(rr<.1&&opp<=2)return doRaise(.5);                 // farol de vez en cuando
+    return {t:'call'};
+  }
+  if(eq<odds*.92&&!(rr<.05&&g.street<3)){return {t:'fold'}}
+  if(rel>2.1||eq>.8)return rr<.75?doRaise(spr<1.5?9:.75+Math.random()*.5):{t:'call'};
+  if(rel>1.45&&rr<.35)return doRaise(.6);
+  if(eq>=odds)return {t:'call'};
+  return toCall<=g.bb&&rr<.5?{t:'call'}:{t:'fold'};
 }
 
 /* ---------- Despacho ---------- */
@@ -3414,7 +3823,8 @@ const ENG={
   brisca:{deal:trickDeal,act:trickAct,cpu:trickCpu},
   tute:{deal:trickDeal,act:trickAct,cpu:trickCpu},
   escoba:{deal:escobaDeal,act:escobaAct,cpu:escobaCpu},
-  chinchon:{deal:chinDeal,act:chinAct,cpu:chinCpu}
+  chinchon:{deal:chinDeal,act:chinAct,cpu:chinCpu},
+  poker:{deal:pokerDeal,act:pokerAct,cpu:pokerCpu}
 };
 function applyAction(g,who,a){
   if(a.t==='next'){if(g.phase!=='end'||g.champ!=null)return false;ENG[g.game].deal(g);return true}
@@ -3874,7 +4284,15 @@ async function mutate(fn,docCode=code){
 }
 
 /* --- Quien aloja la mesa (web) --- */
-function hostSave(){store('bchost',HDOC&&HDOC.status!=='closed'?JSON.stringify(HDOC):null)}
+function hostSave(){store('bchost',HDOC&&HDOC.status!=='closed'?JSON.stringify(HDOC):null);boardSync()}
+let boardMine=null;
+function boardSync(){
+  const B=window.DeporBoard;if(!B)return;
+  const d=amHostPeer&&HDOC;
+  const want=d&&d.status==='lobby'&&d.players.length<(d.need||4)?{host:(d.players.find(p=>p.id===d.host)||{}).name||'Anfitrión',n:d.players.length,need:d.need||4,game:d.game}:null;
+  if(boardMine&&(!want||boardMine!==d.code))B.del('cartas',boardMine);
+  if(want){B.put('cartas',d.code,want);boardMine=d.code}else boardMine=null;
+}
 function hostCast(){const m={t:'doc',d:HDOC};hConns.forEach((id,c)=>{try{if(c.open)c.send(m)}catch(e){}})}
 function hostOpen(c,cb){
   try{hPeer&&hPeer.destroy()}catch(e){}
@@ -3923,7 +4341,7 @@ function hostStop(){
   if(!amHostPeer)return;
   if(HDOC){HDOC={...HDOC,status:'closed'};hostCast()}
   const p=hPeer;setTimeout(()=>{try{p&&p.destroy()}catch(e){}},600);
-  hPeer=null;HDOC=null;amHostPeer=false;hConns=new Map();store('bchost',null);
+  hPeer=null;HDOC=null;amHostPeer=false;hConns=new Map();store('bchost',null);boardSync();
   if(load('bdrole')==='host'){store('bdlast',null);store('bdrole',null)}
   resumeCode=null;
 }
@@ -4005,7 +4423,7 @@ function handleDoc(d){
 function renderOnlineBox(){
   const box=$('onlineBox');if(!box)return;
   if(!NET){box.innerHTML=`<p class="muted">${netNote}</p>`;return}
-  const keep=$('codeIn')?.value||'';
+  const keep=$('codeIn')?.value||'',typing=ROOT.activeElement&&ROOT.activeElement.id==='codeIn',caret=typing?ROOT.activeElement.selectionStart:0;
   const g=GAMES[pickGame];
   const ago=t=>{const m=Math.max(0,Math.round((Date.now()-t)/60000));return m<1?'ahora mismo':m<60?`hace ${m} min`:`hace ${Math.round(m/60)} h`};
   let listBlock='';
@@ -4018,7 +4436,13 @@ function renderOnlineBox(){
           <button class="btn" type="button" data-code="${esc(m.code)}">${mine?'Volver':'Unirse'}</button></div>`}).join('')}</div>`
       :`<p class="muted">Ahora mismo no hay mesas de ${g.name.toLowerCase()} esperando jugadores.</p>`;
     listBlock=`<div class="tag"><span class="livedot"></span>Mesas abiertas (${avail.length})</div>${list}`;
-  }else listBlock='<p class="muted">Crea la mesa y pasa el enlace o el código. Quien crea la mesa tiene que tener esta página abierta hasta que acabe la partida.</p>';
+  }else{
+    const B=window.DeporBoard,avail=B?B.list('cartas').filter(m=>m.game===pickGame&&m.n<m.need&&m.code!==boardMine):[];
+    const list=avail.length?`<div class="open-list">${avail.map(m=>`<div class="avail"><div class="info"><b>Mesa de ${esc(String(m.host||'?').slice(0,14))}</b><span>${+m.n||1} de ${+m.need||2} jugadores${+m.need===4&&g.teams?' · por parejas':''}</span></div><button class="btn" type="button" data-code="${esc(m.code)}">Unirse</button></div>`).join('')}</div>`
+      :`<p class="muted">Ahora mismo no hay mesas de ${g.name.toLowerCase()} esperando. Crea una y aparecerá aquí para los demás.</p>`;
+    listBlock=B?`<div class="tag"><span class="livedot"></span>Mesas abiertas (${avail.length})${B.ready?'':' · conectando…'}</div>${list}`:'';
+    listBlock+='<p class="muted">Quien crea la mesa tiene que tener esta página abierta hasta que acabe la partida.</p>';
+  }
   const invite=inviteCode?`<div class="invite"><h3>¡Te han invitado!</h3><p class="muted">Escribe tu nombre arriba y entra en la mesa <b>${esc(inviteCode)}</b>.</p><button class="btn big" type="button" data-code="${esc(inviteCode)}">Entrar en la mesa</button></div>`:'';
   const resume=resumeCode&&resumeCode!==inviteCode?`<div class="resume"><span>Tienes una mesa en curso (<b>${esc(resumeCode)}</b>).</span><div class="actions" style="justify-content:flex-start"><button class="btn" type="button" data-code="${esc(resumeCode)}">Volver a la mesa</button>${amHostPeer?'<button class="btn alt" type="button" data-act="stopHost">Cerrarla</button>':''}</div></div>`:'';
   box.innerHTML=`<div style="display:grid;gap:12px">${invite}${resume}
@@ -4027,9 +4451,10 @@ function renderOnlineBox(){
     ${needN===4&&g.teams?'<p class="muted">A cuatro se juega por parejas, con tu compañero enfrente.</p>':''}
     <button class="btn big" type="button" id="createBtn">Crear mesa para ${needN}</button>
     ${listBlock}
-    <div class="sub"><span class="muted">¿Te han pasado un código?</span><input type="text" id="codeIn" class="code-in" maxlength="4" placeholder="CÓDIGO" autocomplete="off"><button class="btn alt" type="button" id="joinBtn">Unirse</button></div>
+    <div class="sub"><span class="muted">¿Te han pasado un código?</span><input type="text" id="codeIn" class="code-in" maxlength="4" placeholder="CÓDIGO" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go"><button class="btn alt" type="button" id="joinBtn">Unirse</button></div>
   </div>`;
   if(keep)$('codeIn').value=keep;
+  if(typing){const ni=$('codeIn');try{ni.focus({preventScroll:true});ni.setSelectionRange(caret,caret)}catch(e){}}
 }
 setInterval(()=>{if(NET==='db'&&VIEW==='cartas'&&!$('scrMenu').hidden&&ROOT.activeElement?.id!=='codeIn')renderOnlineBox()},30000);
 function genCode(){const A='ABCDEFGHJKMNPQRSTUVWXYZ';let s='';for(let i=0;i<4;i++)s+=A[rnd(A.length)];return s}
@@ -4143,6 +4568,7 @@ function exitGame(){
   sel=null;show('menu');
 }
 
+window.DeporBoard&&window.DeporBoard.on(()=>{if(NET==='peer'&&VIEW==='cartas'&&!$('scrMenu').hidden&&ROOT.activeElement?.id!=='codeIn')renderOnlineBox()});
 /* ---------- Eventos ---------- */
 ROOT.addEventListener('click',e=>{
   const b=e.target.closest('button,[data-act]');if(!b)return;
