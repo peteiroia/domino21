@@ -3132,7 +3132,7 @@ details.rules b{color:var(--ink)}
 .pkseat .dbtn{position:absolute;right:-6px;bottom:-5px;width:15px;height:15px;border-radius:50%;background:#fff;color:#10225e;font:800 9px var(--body);font-style:normal;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.4)}
 .pkseat .pkn{display:grid;line-height:1.15;min-width:0}
 .pkseat .pkn b{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;max-width:78px}
-.pkseat .pkn small{font-size:11px;color:var(--muted);font-weight:700}
+.pkseat .pkn small{font:700 12px var(--display);color:var(--brass);font-variant-numeric:tabular-nums}
 .pkseat.turn{border-color:var(--brass);box-shadow:0 0 0 3px rgba(226,171,69,.35),0 6px 14px rgba(0,0,0,.4)}
 .pkseat.turn .av{animation:ring 1.2s ease-out infinite}
 .pkseat.out{opacity:.5}
@@ -4227,7 +4227,7 @@ function pokerSeat(w){
   const p=G.players[w],gone=!G.inHand[w],fold=G.folded[w],allin=G.inHand[w]&&!fold&&G.chips[w]===0;
   const n=G.players.length,base=me>=0?me:0,k=(w-base+n)%n,A={2:[90,270],3:[90,216,324],4:[90,212,270,328],5:[90,146,218,322,34],6:[90,140,216,270,324,40]}[n]||[90],ang=(A[k]??(90+k*360/n))*Math.PI/180;
   const cx=Math.cos(ang).toFixed(3),cy=Math.sin(ang).toFixed(3);
-  const status=gone?'Eliminado':fold?'Se retiró':allin?'All-in':`${G.chips[w]} fichas`;
+  const status=gone?'Eliminado':allin?'All-in':String(G.chips[w]);
   const backs=w!==me&&!gone&&!fold?`<span class="pkbk">${backHTML()}${backHTML()}</span>`:'';
   return `<div class="pkseat ${G.turn===w&&G.phase==='play'?'turn':''} ${gone||fold?'out':''} ${w===me?'mine':''}" style="--cx:${cx};--cy:${cy}">
     ${backs}<span class="av ${p.cpu?'cpu':''}">${esc(initials(p.name))}${w===G.dealer?'<i class="dbtn">D</i>':''}</span>
