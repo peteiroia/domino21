@@ -2990,7 +2990,7 @@ button.card{cursor:pointer}
 .card .pkf i{position:absolute;inset:8%;background:var(--wm) center/contain no-repeat;opacity:.22}
 .card .pkf b{position:relative;font:700 calc(var(--cw)*.42) var(--display);color:var(--sc);line-height:1}
 .card .pkf .ps{position:relative;width:34%;height:auto;fill:var(--sc)}
-.pkboard .card,.pkboard .pkslot{--cw:min(var(--tc),calc((100vw - 90px)/5.4))}
+.pkboard .card,.pkboard .pkslot{--cw:min(var(--tc),calc((100vw - 120px)/5.6))}
 .table.pkboard{flex-wrap:nowrap;gap:6px}
 .ofan em.allin{color:#10225e;background:var(--brass);border-radius:999px;padding:0 6px}
 .ofan em.betc{color:#10225e;background:#f6e2b0;border-radius:999px;padding:0 6px}
@@ -3123,6 +3123,34 @@ details.rules b{color:var(--ink)}
 .trickrow .tslot > span{font-size:11.5px;font-weight:800;color:var(--muted);max-width:82px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(0,0,0,.25);padding:0 7px;border-radius:999px}
 .trickrow .tslot.win .card{box-shadow:0 0 0 3px var(--brass),0 0 22px rgba(226,171,69,.7),0 6px 14px rgba(0,0,0,.45);transform:translateY(-6px)}
 .trickrow .tslot.win > span{color:#10225e;background:var(--brass)}
+.mesa.pk{overflow:visible!important;padding:0;align-content:stretch;min-height:300px;border-radius:50%/44%}
+.mesa.pk::after{border-radius:50%/44%}
+.pkring{position:absolute;inset:0;pointer-events:none;z-index:3}
+.pkseat{position:absolute;left:calc(50% + var(--cx) * (50% - 54px));top:calc(50% + var(--cy) * (50% - 26px));transform:translate(-50%,-50%);display:grid;grid-template-columns:auto auto;align-items:center;gap:0 6px;
+  background:rgba(6,22,78,.92);border:1px solid rgba(226,171,69,.55);border-radius:999px;padding:4px 10px 4px 4px;box-shadow:0 6px 14px rgba(0,0,0,.4);white-space:nowrap;max-width:132px;pointer-events:auto}
+.pkseat .av{width:30px;height:30px;font-size:11px;grid-row:span 1;position:relative}
+.pkseat .dbtn{position:absolute;right:-6px;bottom:-5px;width:15px;height:15px;border-radius:50%;background:#fff;color:#10225e;font:800 9px var(--body);font-style:normal;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.pkseat .pkn{display:grid;line-height:1.15;min-width:0}
+.pkseat .pkn b{font-size:12.5px;overflow:hidden;text-overflow:ellipsis;max-width:78px}
+.pkseat .pkn small{font-size:11px;color:var(--muted);font-weight:700}
+.pkseat.turn{border-color:var(--brass);box-shadow:0 0 0 3px rgba(226,171,69,.35),0 6px 14px rgba(0,0,0,.4)}
+.pkseat.turn .av{animation:ring 1.2s ease-out infinite}
+.pkseat.out{opacity:.5}
+.pkseat.mine{border-color:rgba(226,171,69,.9)}
+.pkseat .pkbk{position:absolute;left:50%;top:-14px;transform:translateX(-50%);display:flex}
+.pkseat .pkbk .back{--cw:16px;margin:0 -2px;border-width:1.2px}
+.pkseat .pkbet{position:absolute;left:50%;transform:translateX(-50%);top:calc(100% + 3px);font:800 11px var(--body);color:#10225e;background:linear-gradient(180deg,#f6e2b0,var(--brass));border-radius:999px;padding:1px 8px;box-shadow:0 2px 5px rgba(0,0,0,.35)}
+.pkcenter{position:absolute;inset:0;display:grid;align-content:center;justify-items:center;gap:8px;padding:0 12%}
+#scrGame.pkmode #opps,#scrGame.pkmode #meBar{display:none!important}
+@media (orientation:portrait),(min-height:561px){#appC.ingame #scrGame.pkmode{grid-template-rows:auto minmax(0,1fr) auto auto auto!important}}
+.pkcenter{padding:0 5%}
+.mesa.pk .pkboard .card,.mesa.pk .pkboard .pkslot{--cw:min(calc(var(--tc)*1.1),calc((100vw - 32px)*.15))}
+@media (orientation:landscape) and (max-height:560px){.mesa.pk .pkboard .card,.mesa.pk .pkboard .pkslot{--cw:min(var(--tc),5.4vw)}.pkcenter{padding:58px 12% 0}}
+@media (min-width:900px) and (min-height:600px){.mesa.pk .pkboard .card,.mesa.pk .pkboard .pkslot{--cw:min(var(--tc),8.2vw)}}
+.pkslide{display:flex;align-items:center;gap:10px;flex-basis:100%;justify-content:center;min-width:0;max-width:100%}
+.pkslide input[type=range]{flex:1 1 auto;width:100%;min-width:60px;max-width:320px;accent-color:var(--brass);height:28px}
+.pkslide .btn{flex:none}
+#appC.ingame #acts{min-width:0;max-width:100%}
 .fly{animation:fly .45s cubic-bezier(.2,.8,.25,1)}
 @keyframes fly{from{transform:translate(var(--fx,0),var(--fy,120px)) rotate(-25deg) scale(.85);opacity:.2}}
 .hint{color:var(--muted);font-size:14px;text-align:center;margin:0;font-weight:600}
@@ -3213,7 +3241,7 @@ button.pile.go .back,button.pile.go .card{box-shadow:0 0 0 3px var(--brass),0 0 
   #appC.ingame{max-width:none}
   #appC.ingame #scrGame:not([hidden]){grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);grid-template-rows:auto auto auto minmax(0,1fr) auto;
     grid-template-areas:"mesa score" "mesa opps" "mesa log" "mesa hand" "mesa acts";column-gap:12px!important;row-gap:4px!important}
-  #appC.ingame #cScore{grid-area:score}#appC.ingame #opps{grid-area:opps}#appC.ingame #felt{grid-area:mesa}#appC.ingame #logLine{grid-area:log;font-size:13px;min-height:0}
+  #appC.ingame #cScore{grid-area:score}#appC.ingame #opps{grid-area:opps}#appC.ingame #felt{grid-area:mesa}#appC.ingame #logLine{grid-area:log;font-size:13px;min-height:0;position:relative;z-index:8;text-shadow:0 1px 4px rgba(0,0,0,.8)}
   #appC.ingame #meBar{display:none}#appC.ingame #hand{grid-area:hand;align-self:end}#appC.ingame #acts{grid-area:acts}
   #appC.ingame .mesa{border-radius:48px}
   #appC.ingame .topbar small{display:none}
@@ -4179,6 +4207,7 @@ function renderGame(){
       <div class="ofan">${out?'<em>Eliminado</em>':Array.from({length:Math.min(cnt,7)},()=>backHTML()).join('')+(cnt?`<em>${cnt}</em>`:'')}${G.game==='escoba'&&G.escobas&&G.escobas[w]?`<em>· ${G.escobas[w]} esc.</em>`:''}</div>
     </div>`}).join('');
   const animate=G.seq!==animSeq;animSeq=G.seq;
+  $('felt').className='mesa'+(G.game==='poker'?' pk':'');$('scrGame').classList.toggle('pkmode',G.game==='poker');
   $('felt').innerHTML=feltHTML(animate);
   $('logLine').textContent=G.log||'';
   const myTurn=me>=0&&G.turn===me&&G.phase==='play';
@@ -4193,11 +4222,26 @@ function renderGame(){
   renderActs(myTurn);
   if(G.phase==='end'&&G.summary){if($('champBox').hidden)showSummary()}else $('roundBox').hidden=true;
 }
+let pkSeen={key:'',n:0};
+function pokerSeat(w){
+  const p=G.players[w],gone=!G.inHand[w],fold=G.folded[w],allin=G.inHand[w]&&!fold&&G.chips[w]===0;
+  const n=G.players.length,base=me>=0?me:0,k=(w-base+n)%n,A={2:[90,270],3:[90,216,324],4:[90,212,270,328],5:[90,146,218,322,34],6:[90,140,216,270,324,40]}[n]||[90],ang=(A[k]??(90+k*360/n))*Math.PI/180;
+  const cx=Math.cos(ang).toFixed(3),cy=Math.sin(ang).toFixed(3);
+  const status=gone?'Eliminado':fold?'Se retiró':allin?'All-in':`${G.chips[w]} fichas`;
+  const backs=w!==me&&!gone&&!fold?`<span class="pkbk">${backHTML()}${backHTML()}</span>`:'';
+  return `<div class="pkseat ${G.turn===w&&G.phase==='play'?'turn':''} ${gone||fold?'out':''} ${w===me?'mine':''}" style="--cx:${cx};--cy:${cy}">
+    ${backs}<span class="av ${p.cpu?'cpu':''}">${esc(initials(p.name))}${w===G.dealer?'<i class="dbtn">D</i>':''}</span>
+    <span class="pkn"><b>${w===me?'Tú':esc(p.name)}</b><small>${status}</small></span>
+    ${G.bet[w]?`<span class="pkbet">${G.bet[w]}</span>`:''}</div>`;
+}
 function pokerFelt(animate){
-  const slots=[0,1,2,3,4].map(i=>G.board[i]?cardHTML(G.board[i],{cls:animate&&i>=(G.boardShown||0)?'fresh':''}):'<div class="emptyp pkslot"></div>').join('');
-  G.boardShown=G.board.length;
+  const key=(G.code||'solo')+':'+G.round;
+  if(pkSeen.key!==key)pkSeen={key,n:0};
+  const slots=[0,1,2,3,4].map(i=>G.board[i]?cardHTML(G.board[i],{cls:i>=pkSeen.n?'fresh':''}):'<div class="emptyp pkslot"></div>').join('');
+  pkSeen.n=G.board.length;
   const toCall=me>=0&&G.phase==='play'?G.cur-G.bet[me]:0;
-  return `<div class="table pkboard">${slots}</div><div class="chips"><span class="trump">Bote: ${pkPot(G)}</span>${G.cur?`<span class="chip">Apuesta: ${G.cur}</span>`:''}${toCall>0&&G.turn===me?`<span class="chip" style="background:rgba(226,171,69,.4)">Para igualar: ${Math.min(toCall,G.chips[me])}</span>`:''}</div>${G.phase==='play'?`<p class="hint">${G.turn===me?'Te toca.':`Juega ${label(G.turn)}…`}</p>`:''}`;
+  const seats=G.players.map((_,i)=>pokerSeat(i)).join('');
+  return `<div class="pkring">${seats}</div><div class="pkcenter"><div class="table pkboard">${slots}</div><div class="chips"><span class="trump">Bote: ${pkPot(G)}</span>${G.cur?`<span class="chip">Apuesta: ${G.cur}</span>`:''}${toCall>0&&G.turn===me?`<span class="chip" style="background:rgba(226,171,69,.4)">Para igualar: ${Math.min(toCall,G.chips[me])}</span>`:''}</div>${me>=0&&G.hands[me]&&G.hands[me].length&&G.board.length?`<p class="hint">Tienes: ${handLabel(evalHand([...G.hands[me],...G.board]))}</p>`:''}</div>`;
 }
 function feltHTML(animate){
   if(G.game==='poker')return pokerFelt(animate);
@@ -4309,9 +4353,11 @@ function pokerActs(myTurn){
   if(toCall>0)h+=`<button class="btn alt" type="button" data-pk="fold">Retirarse</button>`;
   h+=`<button class="btn" type="button" data-pk="call">${toCall<=0?'Pasar':toCall>=stack?`Igualar all-in (${stack})`:`Igualar ${toCall}`}</button>`;
   if(maxTo>G.cur){
-    const minTo=Math.min(maxTo,G.cur+G.minRaise),seen=new Set();
-    const opts=[[minTo,G.cur?`Subir a ${minTo}`:`Apostar ${minTo}`],[G.cur+Math.round((pot+toCall)/2/G.bb)*G.bb,'½ bote'],[G.cur+Math.round((pot+toCall)/G.bb)*G.bb,'Bote']];
-    for(const [to,l] of opts){if(to>=minTo&&to<maxTo&&!seen.has(to)){seen.add(to);h+=`<button class="btn alt" type="button" data-pk="raise" data-to="${to}">${l}${l.startsWith('Subir')||l.startsWith('Apostar')?'':` (${to})`}</button>`}}
+    const minTo=Math.min(maxTo,G.cur+G.minRaise),seen=new Set(),step=Math.max(1,G.sb);
+    if(maxTo>minTo)h+=`<div class="pkslide"><input type="range" id="pkRange" min="${minTo}" max="${maxTo}" step="${step}" value="${minTo}" aria-label="Cantidad de la subida"><button class="btn" type="button" data-pk="raise" data-to="${minTo}" id="pkRaiseBtn">${G.cur?'Subir a':'Apostar'} <b>${minTo}</b></button></div>`;
+    else h+=`<button class="btn alt" type="button" data-pk="raise" data-to="${minTo}">${G.cur?'Subir a':'Apostar'} ${minTo}</button>`;
+    const opts=[[G.cur+Math.round((pot+toCall)/2/G.bb)*G.bb,'½ bote'],[G.cur+Math.round((pot+toCall)/G.bb)*G.bb,'Bote']];
+    for(const [to,l] of opts){if(to>minTo&&to<maxTo&&!seen.has(to)){seen.add(to);h+=`<button class="btn alt" type="button" data-pk="raise" data-to="${to}">${l} (${to})</button>`}}
     h+=`<button class="btn alt" type="button" data-pk="allin">All-in (${maxTo})</button>`;
   }
   return h;
@@ -4782,7 +4828,8 @@ ROOT.addEventListener('click',e=>{
       if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>{b.textContent='Copiado'},fb);else fb();break}
   }
 });
-ROOT.addEventListener('input',e=>{if(e.target.id==='whoIn'){const q=e.target.value;$('onlineBox')._who=q;$('whoRes').innerHTML=window.DeporInvite.resHTML(q)}});
+ROOT.addEventListener('input',e=>{if(e.target.id==='pkRange'){const v=+e.target.value,b=$('pkRaiseBtn'),max=+e.target.max;if(b){b.dataset.to=v;b.dataset.pk=v>=max?'allin':'raise';b.innerHTML=v>=max?`All-in <b>${v}</b>`:`${G.cur?'Subir a':'Apostar'} <b>${v}</b>`}return}
+  if(e.target.id==='whoIn'){const q=e.target.value;$('onlineBox')._who=q;$('whoRes').innerHTML=window.DeporInvite.resHTML(q)}});
 ROOT.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='codeIn')joinTable(e.target.value)});
 $('nameIn').addEventListener('change',()=>{store('bdname',$('nameIn').value.trim());window.DeporInvite&&window.DeporInvite.presence()});
 window.__cardsJoin=(c,game)=>{if(GAMES[game])pickGame=game;view('cartas');show('menu');setTab('online');joinTable(c)};
