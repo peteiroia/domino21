@@ -1,5 +1,5 @@
 // Juegos de mesa del Dépor: primero la red (para tener siempre la última versión); sin conexión, la copia guardada
-const C='domino-depor-v13';
+const C='domino-depor-v14';
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png'])).catch(()=>{}))});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
