@@ -494,8 +494,9 @@ input[type=text]{border-radius:12px;background:rgba(255,255,255,.1);border-color
 .board .target{cursor:pointer}
 .board .target .tf{stroke:var(--hot);stroke-width:.16;animation:tglow .7s ease-in-out infinite alternate}
 @keyframes tglow{from{stroke-opacity:1}to{stroke-opacity:.35}}
-.board .tarrow{cursor:pointer;transform-box:fill-box;transform-origin:center;transform:scale(1.55)}
-.sidebtn{min-width:150px;min-height:56px;font-size:17px!important}
+.board .tarrow{cursor:pointer}
+.board .tarrow .hit{fill:transparent;stroke:none;animation:none}
+.sidebtn{min-width:140px;min-height:46px;font-size:16px!important;padding-top:8px!important;padding-bottom:8px!important}
 .board .tarrow circle{fill:var(--brass);stroke:#fff;stroke-width:.06;animation:tglow .7s ease-in-out infinite alternate}
 .board .tarrow path{fill:none;stroke:#0a1f5c;stroke-width:.14;stroke-linecap:round;stroke-linejoin:round}
 .opp.T .ofan{padding-left:0}
@@ -2319,9 +2320,21 @@ function svgTile(p,cls,attr=''){
   s+=pipsSvg(p.a,p.x,p.y,hz)+pipsSvg(p.b,hz?p.x+1:p.x,hz?p.y:p.y+1,hz);
   return s+'</g>';
 }
+const AR=.68;let ARB=null,ARPS=[];
 function arrowMark(x,y,ang,side){
   const a=ang*180/Math.PI;
-  return `<g data-end="${side}" class="tarrow" role="button" aria-label="Poner por este lado"><circle cx="${x.toFixed(3)}" cy="${y.toFixed(3)}" r=".55"/><path transform="translate(${x.toFixed(3)} ${y.toFixed(3)}) rotate(${a.toFixed(1)})" d="M-.18 -.28L.22 0L-.18 .28"/></g>`;
+  return `<g data-end="${side}" class="tarrow" role="button" aria-label="Poner por este lado"><circle class="hit" cx="${x.toFixed(3)}" cy="${y.toFixed(3)}" r="${AR+.3}"/><circle cx="${x.toFixed(3)}" cy="${y.toFixed(3)}" r="${AR}"/><path transform="translate(${x.toFixed(3)} ${y.toFixed(3)}) rotate(${a.toFixed(1)})" d="M-.22 -.34L.27 0L-.22 .34"/></g>`;
+}
+function arrowOk(x,y,taken){
+  if(ARB&&(x-AR<ARB.x0||x+AR>ARB.x1||y-AR<ARB.y0||y+AR>ARB.y1))return false;
+  for(const p of ARPS){const cx=Math.max(p.x,Math.min(x,p.x+p.w)),cy=Math.max(p.y,Math.min(y,p.y+p.h));if((x-cx)**2+(y-cy)**2<(AR+.04)**2)return false}
+  for(const q of taken)if((x-q[0])**2+(y-q[1])**2<(2*AR+.1)**2)return false;
+  return true;
+}
+function arrowNear(e,dx,dy,taken){
+  const ex=e.x+e.w/2,ey=e.y+e.h/2,g=AR+.1;
+  const c=[[dx,dy],[-dy,dx],[dy,-dx]].map(([ux,uy])=>{const t=Math.min(Math.abs(ux)>1e-6?e.w/2/Math.abs(ux):1e9,Math.abs(uy)>1e-6?e.h/2/Math.abs(uy):1e9);return [ex+ux*(t+g),ey+uy*(t+g),Math.atan2(dy,dx)]});
+  return c.find(q=>arrowOk(q[0],q[1],taken))||c[0];
 }
 function endArrows(ps,last){
   const byIdx=i=>ps.find(p=>p.idx===i);
@@ -2330,15 +2343,15 @@ function endArrows(ps,last){
     const ex=e.x+e.w/2,ey=e.y+e.h/2;let dx=ex-(n.x+n.w/2),dy=ey-(n.y+n.h/2);
     const horiz=e.a===e.b?Math.abs(dx)>=Math.abs(dy):e.w>e.h;
     if(horiz){dx=Math.sign(dx)||1;dy=0}else{dy=Math.sign(dy)||1;dx=0}
-    const t=Math.min(Math.abs(dx)>1e-6?e.w/2/Math.abs(dx):1e9,Math.abs(dy)>1e-6?e.h/2/Math.abs(dy):1e9);
-    return arrowMark(ex+dx*(t+.75),ey+dy*(t+.75),Math.atan2(dy,dx),side);
+    const q=arrowNear(e,dx,dy,taken);taken.push(q);
+    return arrowMark(q[0],q[1],q[2],side);
   };
+  const taken=[];
   return mk(0,1,'L')+mk(last,last-1,'R');
 }
 function arrowsSvg(p){
   const cy=p.y+p.h/2;
-  const m=(x,side,d)=>`<g data-end="${side}" class="tarrow" role="button" aria-label="Poner por la ${side==='L'?'izquierda':'derecha'}"><circle cx="${x}" cy="${cy}" r=".55"/><path d="${d}"/></g>`;
-  return m(p.x-.75,'L',`M${p.x-.55} ${cy-.28}L${p.x-.95} ${cy}L${p.x-.55} ${cy+.28}`)+m(p.x+p.w+.75,'R',`M${p.x+p.w+.55} ${cy-.28}L${p.x+p.w+.95} ${cy}L${p.x+p.w+.55} ${cy+.28}`);
+  return arrowMark(p.x-AR-.1,cy,Math.PI,'L')+arrowMark(p.x+p.w+AR+.1,cy,0,'R');
 }
 /* La ficha recién puesta viaja desde el sitio de quien la juega hasta su hueco en el campo */
 function flyIn(el,who){
@@ -2392,6 +2405,7 @@ function renderBoard(){
   const pad=choosing?1.4:.4;
   let vb=`${-pad} ${minY-pad} ${W+2*pad} ${maxY-minY+2*pad}`;
   if(fit){const vw=fit.cw/fit.u,vh=fit.ch/fit.u;vb=`${(W/2-vw/2).toFixed(3)} ${((minY+maxY)/2-vh/2).toFixed(3)} ${vw.toFixed(3)} ${vh.toFixed(3)}`}
+  {const v=vb.split(' ').map(Number);ARB={x0:v[0],y0:v[1],x1:v[0]+v[2],y1:v[1]+v[3]};ARPS=ps}
   el.innerHTML=`<svg viewBox="${vb}" role="img" aria-label="Mesa con ${G.chain.length} fichas">`+
     ps.map(p=>{
       const tL=choosing&&p.idx===0&&last>0,tR=choosing&&p.idx===last&&last>0;
